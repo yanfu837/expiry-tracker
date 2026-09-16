@@ -1,0 +1,23 @@
+# Secret environment variables
+.env
+
+# Virtual environment
+venv/
+
+# Local database
+db.sqlite3
+
+# User uploaded files
+media/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

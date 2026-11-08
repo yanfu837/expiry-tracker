@@ -1,27 +1,15 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Log in</title>
-</head>
-
-<body>
-
+{% extends 'expiry/base.html' %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<section class="panel form-panel">
     <h1>Log in</h1>
-
-    <form method="POST">
+    <p class="intro">Keep track of licenses, insurance, contracts and important business dates.</p>
+    <form method="post">
         {% csrf_token %}
-
-        {{ form.as_p }}
-
-        <button type="submit">
-            Log in
-        </button>
+        {% include 'expiry/form_fields.html' %}
+        <button type="submit">Log in</button>
     </form>
-
-    <p>
-        Don't have an account?
-        <a href="{% url 'register' %}">Register</a>
-    </p>
-
-</body>
-</html>
+    <p><a href="{% url 'password_reset' %}">Forgot your password?</a></p>
+    <p>Don't have an account? <a href="{% url 'register' %}">Create account</a></p>
+</section>
+{% endblock %}

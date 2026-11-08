@@ -1,0 +1,60 @@
+:root { color-scheme: light; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #172b3a; background: #f4f7f9; line-height: 1.6; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: #075b76; text-underline-offset: .18em; overflow-wrap: anywhere; }
+a:hover { color: #043c4e; }
+:focus-visible { outline: 3px solid #b35e00; outline-offset: 4px; }
+.skip-link { position: absolute; top: -5rem; left: 1rem; background: white; padding: .75rem; z-index: 2; }
+.skip-link:focus { top: .5rem; }
+.site-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem max(1rem, calc((100% - 68rem) / 2)); background: #fff; border-bottom: 1px solid #d7e1e7; }
+.brand { font-size: 1.25rem; font-weight: 750; text-decoration: none; color: #172b3a; }
+nav { display: flex; flex-wrap: wrap; align-items: center; gap: .85rem; min-width: 0; }
+nav form { margin: 0; }
+.username { overflow-wrap: anywhere; max-width: 18rem; }
+.container { max-width: 68rem; margin: 2rem auto; padding: 0 1rem; }
+h1 { font-size: clamp(1.7rem, 4vw, 2.3rem); line-height: 1.2; margin: 0 0 .75rem; }
+h2 { font-size: 1.3rem; line-height: 1.4; }
+h3 { margin: 0 0 .6rem; font-size: 1.15rem; overflow-wrap: anywhere; }
+.intro { max-width: 45rem; color: #4a5c6a; }
+.panel { background: #fff; border: 1px solid #d7e1e7; border-radius: .9rem; padding: clamp(1rem, 4vw, 2rem); }
+.form-panel { max-width: 36rem; margin: 2.5rem auto; }
+.field { margin: 1.3rem 0; min-width: 0; overflow-wrap: anywhere; }
+.field > label { display: block; font-weight: 650; margin-bottom: .35rem; }
+input:not([type=checkbox]):not([type=hidden]), textarea, select { display: block; width: 100%; max-width: 100%; padding: .7rem .8rem; border: 1px solid #8396a3; border-radius: .4rem; font: inherit; background: #fff; color: inherit; }
+input[type=file] { font-size: .9rem; }
+textarea { resize: vertical; }
+.helptext { margin-top: .35rem; color: #4a5c6a; font-size: .9rem; }
+.helptext ul { margin: .5rem 0; padding-left: 1.3rem; }
+.errorlist { color: #a12222; padding-left: 1.3rem; }
+[aria-invalid=true] { border-color: #a12222 !important; }
+button, .button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: .6rem 1rem; border: 1px solid #075b76; border-radius: .45rem; font: inherit; font-weight: 650; text-decoration: none; background: #075b76; color: #fff; cursor: pointer; }
+button:hover, .button:hover { background: #043c4e; color: #fff; }
+.secondary { background: #fff; color: #075b76; }
+.danger { background: #a12222; border-color: #a12222; }
+.danger:hover { background: #761919; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin: 1rem 0; }
+.messages { padding: 0; list-style: none; }
+.message { border-radius: .5rem; background: #e4f3f7; border: 1px solid #87b5c1; padding: .85rem 1rem; }
+.message.error { color: #8e1d1d; border-color: #c78d8d; background: #fff0f0; }
+.group { margin-top: 2rem; }
+.count { display: inline-block; background: #e2eaf0; padding: .05rem .55rem; margin-left: .3rem; border-radius: 2rem; font-size: .9rem; vertical-align: middle; }
+.item-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 27rem), 1fr)); gap: 1rem; }
+.item-card { min-width: 0; padding: 1.25rem; border-left: 5px solid #538168; }
+.expired { border-left-color: #a12222; }
+.thirty { border-left-color: #ac4a11; }
+.ninety { border-left-color: #8a6715; }
+.status { font-weight: 700; }
+.expired .status { color: #a12222; }
+.thirty .status { color: #963d0c; }
+.ninety .status { color: #785810; }
+.notes { white-space: pre-wrap; overflow-wrap: anywhere; }
+.empty { color: #4a5c6a; }
+footer { padding: 1.5rem 1rem; text-align: center; color: #4a5c6a; font-size: .85rem; }
+@media (max-width: 560px) {
+    .site-header { align-items: flex-start; padding: 1rem; }
+    nav { width: 100%; gap: .65rem; }
+    .username { max-width: 100%; width: 100%; }
+    .container { margin: 1.25rem auto; }
+    .form-panel { margin: 0 auto; }
+    .actions { align-items: stretch; }
+}

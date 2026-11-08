@@ -1,4 +1,4 @@
-from datetime import date
+from django.utils import timezone
 
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand
@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        today = date.today()
+        today = timezone.localdate()
 
         # Only send reminders on these exact days
         reminder_days = [30, 14, 7, 1]

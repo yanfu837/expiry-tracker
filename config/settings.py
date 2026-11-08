@@ -99,7 +99,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 LANGUAGE_CODE = "en-us"
-TIME_ZONE = os.getenv("TIME_ZONE", "UTC")
+TIME_ZONE = os.getenv("TIME_ZONE", "Asia/Taipei")
 USE_I18N = True
 USE_TZ = True
 STATIC_URL = "/static/"
@@ -140,8 +140,8 @@ USE_CLOUDINARY = bool(os.getenv("CLOUDINARY_URL")) or all(
 DOCUMENT_UPLOADS_ENABLED = USE_CLOUDINARY or not IS_RENDER
 STORAGES = {
     "default": {
-        "BACKEND": "cloudinary_storage.storage.RawMediaCloudinaryStorage" if USE_CLOUDINARY
-        else "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "expiry.storage.PrivateCloudinaryStorage" if USE_CLOUDINARY
+        else "expiry.storage.PrivateFileSystemStorage",
     },
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }

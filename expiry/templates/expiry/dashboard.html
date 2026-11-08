@@ -8,11 +8,12 @@
 {% endif %}
 <div class="actions">
     <a class="button" href="{% url 'add_item' %}">+ Add expiry item</a>
-    <form method="post" action="{% url 'test_email' %}">
+    {% if email_available %}<form method="post" action="{% url 'test_email' %}">
         {% csrf_token %}
         <button class="secondary" type="submit">Email upcoming items</button>
-    </form>
+    </form>{% endif %}
 </div>
+{% if not email_available %}<p class="message">Email reminders are not enabled yet. You can continue managing your dates and documents here.</p>{% endif %}
 {% for section in sections %}
     <section class="group" aria-labelledby="heading-{{ section.id }}">
         <h2 id="heading-{{ section.id }}">{{ section.title }} <span class="count">{{ section.items|length }}</span></h2>
@@ -31,7 +32,7 @@
                         {% endif %}
                     </p>
                     {% if item.notes %}<p class="notes">{{ item.notes }}</p>{% endif %}
-                    {% if item.document %}<p><a href="{{ item.document.url }}" target="_blank" rel="noopener noreferrer">View document</a></p>{% endif %}
+                    {% if item.document %}<p><a href="{{ item.document.url }}" target="_blank" rel="noopener noreferrer">Download document</a></p>{% endif %}
                     <div class="actions">
                         <a class="button secondary" href="{% url 'edit_item' item.id %}">Edit</a>
                         <a class="button secondary" href="{% url 'delete_item' item.id %}">Delete</a>

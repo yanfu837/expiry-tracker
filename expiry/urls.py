@@ -8,11 +8,12 @@ urlpatterns = [
     path("add/", views.add_item, name="add_item"),
     path("edit/<int:item_id>/", views.edit_item, name="edit_item"),
     path("delete/<int:item_id>/", views.delete_item, name="delete_item"),
+    path("documents/<int:item_id>/download/", views.download_document, name="download_document"),
     path("register/", views.register, name="register"),
     path("account/email/", views.account_email, name="account_email"),
     path("login/", auth_views.LoginView.as_view(template_name="expiry/login.html"), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
-    path("password-reset/", auth_views.PasswordResetView.as_view(
+    path("password-reset/", views.ConfiguredPasswordResetView.as_view(
         template_name="expiry/password_reset_form.html",
         email_template_name="expiry/password_reset_email.txt",
         subject_template_name="expiry/password_reset_subject.txt",
@@ -29,4 +30,5 @@ urlpatterns = [
         template_name="expiry/password_reset_complete.html",
     ), name="password_reset_complete"),
     path("test-email/", views.test_email, name="test_email"),
+    path("privacy/", views.privacy, name="privacy"),
 ]

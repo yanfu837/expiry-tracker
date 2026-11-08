@@ -1,17 +1,24 @@
 import logging
+from pathlib import PurePosixPath
+import mimetypes
 from datetime import timedelta
 from smtplib import SMTPException
 
 from django.contrib import messages
 from django.contrib.auth import login
+from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_safe
+from django.utils.text import slugify
 
 from .forms import AccountEmailForm, ExpiryItemForm, RegistrationForm
 from .models import ExpiryItem
+from .storage import DocumentStorageError
+from .reminders import email_is_configured
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +51,7 @@ def dashboard(request):
         "within_30_days": groups[1],
         "within_90_days": groups[2],
         "later_items": groups[3],
+        "email_available": email_is_configured(),
     })
 
 
@@ -53,9 +61,13 @@ def add_item(request):
     if request.method == "POST" and form.is_valid():
         item = form.save(commit=False)
         item.user = request.user
-        item.save()
-        messages.success(request, "Expiry item added.")
-        return redirect("dashboard")
+        try:
+            item.save()
+        except DocumentStorageError:
+            form.add_error("document", "The document could not be saved. Please try again later.")
+        else:
+            messages.success(request, "Expiry item added.")
+            return redirect("dashboard")
     return render(request, "expiry/add_item.html", {"form": form})
 
 
@@ -68,9 +80,13 @@ def edit_item(request, item_id):
         instance=item,
     )
     if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Expiry item updated.")
-        return redirect("dashboard")
+        try:
+            form.save()
+        except DocumentStorageError:
+            form.add_error("document", "The document could not be saved. Please try again later.")
+        else:
+            messages.success(request, "Expiry item updated.")
+            return redirect("dashboard")
     return render(request, "expiry/edit_item.html", {"form": form, "item": item})
 
 
@@ -82,6 +98,30 @@ def delete_item(request, item_id):
         messages.success(request, "Expiry item deleted.")
         return redirect("dashboard")
     return render(request, "expiry/delete_item.html", {"item": item})
+
+
+@login_required
+@require_safe
+def download_document(request, item_id):
+    item = get_object_or_404(ExpiryItem, pk=item_id, user=request.user)
+    if not item.document:
+        raise Http404
+    try:
+        file = item.document.open("rb")
+    except (OSError, ValueError):
+        logger.warning("Document download unavailable for item %s", item.pk)
+        response = HttpResponse("This document is temporarily unavailable. Please try again later.", status=503)
+        response["Retry-After"] = "60"
+    else:
+        extension = PurePosixPath(item.document.name).suffix.lower()
+        filename = (slugify(item.name)[:100] or "document") + extension
+        content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        response = FileResponse(file, as_attachment=True, filename=filename, content_type=content_type)
+    response["Cache-Control"] = "private, no-store, max-age=0"
+    response["Pragma"] = "no-cache"
+    response["Referrer-Policy"] = "no-referrer"
+    response["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 @login_required
@@ -97,6 +137,9 @@ def account_email(request):
 @login_required
 @require_POST
 def test_email(request):
+    if not email_is_configured():
+        messages.error(request, "Email reminders are not enabled yet.")
+        return redirect("dashboard")
     if not request.user.email:
         messages.error(request, "Add an email address before sending reminders.")
         return redirect("account_email")
@@ -115,9 +158,23 @@ def test_email(request):
     )
     try:
         send_mail(f"Expiry Tracker: {len(items)} items expiring soon", message, None, [request.user.email])
-    except (SMTPException, OSError):
-        logger.exception("Unable to send an expiry reminder")
+    except (SMTPException, OSError) as error:
+        logger.error("Unable to send an expiry reminder for account %s (%s)", request.user.pk, type(error).__name__)
         messages.error(request, "The reminder could not be sent. Please try again later or contact support.")
     else:
         messages.success(request, "Expiry reminder summary sent.")
     return redirect("dashboard")
+
+
+class ConfiguredPasswordResetView(auth_views.PasswordResetView):
+    def dispatch(self, request, *args, **kwargs):
+        if not email_is_configured():
+            response = render(request, "expiry/email_unavailable.html", status=503)
+            response["Cache-Control"] = "private, no-store"
+            response["Retry-After"] = "3600"
+            return response
+        return super().dispatch(request, *args, **kwargs)
+
+
+def privacy(request):
+    return render(request, "expiry/privacy.html")

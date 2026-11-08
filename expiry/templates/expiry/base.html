@@ -1,0 +1,41 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Track business licenses, insurance, contracts and important expiry dates.">
+    <title>{% block title %}Expiry Tracker{% endblock %} | Expiry Tracker</title>
+    <link rel="stylesheet" href="{% static 'expiry/styles.css' %}">
+</head>
+<body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+        <a class="brand" href="{% url 'dashboard' %}">Expiry Tracker</a>
+        <nav aria-label="Account">
+            {% if user.is_authenticated %}
+                <span class="username">{{ user.username }}</span>
+                <a href="{% url 'account_email' %}">Email settings</a>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="button secondary" type="submit">Log out</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">Log in</a>
+                <a class="button secondary" href="{% url 'register' %}">Create account</a>
+            {% endif %}
+        </nav>
+    </header>
+    <main class="container" id="main">
+        {% if messages %}
+            <ul class="messages" aria-label="Notifications">
+                {% for message in messages %}
+                    <li class="message {{ message.tags }}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer>Expiry Tracker · Keep important dates in view.</footer>
+</body>
+</html>

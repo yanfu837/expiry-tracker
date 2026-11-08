@@ -1,23 +1,12 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Add Expiry Item</title>
-</head>
-<body>
-
-    <h1>Add Expiry Item</h1>
-
-    <form method="POST" enctype="multipart/form-data"    >
+{% extends 'expiry/base.html' %}
+{% block title %}Add expiry item{% endblock %}
+{% block content %}
+<section class="panel form-panel">
+    <h1>Add expiry item</h1>
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
-
-        {{ form.as_p }}
-
-        <button type="submit">Save</button>
+        {% include 'expiry/form_fields.html' %}
+        <div class="actions"><button type="submit">Save</button><a href="{% url 'dashboard' %}">Cancel</a></div>
     </form>
-
-    <p>
-        <a href="{% url 'dashboard' %}">Back to dashboard</a>
-    </p>
-
-</body>
-</html>
+</section>
+{% endblock %}

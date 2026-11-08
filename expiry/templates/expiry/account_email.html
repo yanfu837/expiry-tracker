@@ -1,0 +1,13 @@
+{% extends 'expiry/base.html' %}
+{% block title %}Email settings{% endblock %}
+{% block content %}
+<section class="panel form-panel">
+    <h1>Email settings</h1>
+    <p>Choose the email address for reminders and password recovery. Confirm your current password to save it.</p>
+    <form method="post">
+        {% csrf_token %}
+        {% include 'expiry/form_fields.html' %}
+        <div class="actions"><button type="submit">Save email</button><a href="{% url 'dashboard' %}">Cancel</a></div>
+    </form>
+</section>
+{% endblock %}

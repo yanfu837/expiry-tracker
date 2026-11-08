@@ -1,15 +1,12 @@
-<h1>Delete Item</h1>
-
-<p>Are you sure you want to delete "{{ item.name }}"?</p>
-
-<form method="POST">
-    {% csrf_token %}
-
-    <button type="submit">
-        Confirm Delete
-    </button>
-</form>
-
-<a href="{% url 'dashboard' %}">
-    Cancel
-</a>
+{% extends 'expiry/base.html' %}
+{% block title %}Delete item{% endblock %}
+{% block content %}
+<section class="panel form-panel">
+    <h1>Delete item</h1>
+    <p>Are you sure you want to delete “{{ item.name }}”?</p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="actions"><button class="danger" type="submit">Confirm delete</button><a href="{% url 'dashboard' %}">Cancel</a></div>
+    </form>
+</section>
+{% endblock %}

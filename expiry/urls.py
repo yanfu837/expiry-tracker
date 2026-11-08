@@ -2,8 +2,10 @@ from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
 
 from . import views
+from .scheduled_reminders import run_scheduled_reminders
 
 urlpatterns = [
+    path("internal/reminders/run/", run_scheduled_reminders, name="scheduled_reminders"),
     path("", views.dashboard, name="dashboard"),
     path("add/", views.add_item, name="add_item"),
     path("edit/<int:item_id>/", views.edit_item, name="edit_item"),

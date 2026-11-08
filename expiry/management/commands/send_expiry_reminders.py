@@ -1,11 +1,7 @@
-from datetime import timedelta
-
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 
 from expiry.deletions import cleanup_documents
-from expiry.models import ExpiryItem, ReminderDelivery
-from expiry.reminders import REMINDER_DAYS, email_is_configured, send_reminders
+from expiry.reminders import email_is_configured, reminder_preview, send_reminders
 
 
 class Command(BaseCommand):
@@ -17,11 +13,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options["dry_run"]:
-            today = timezone.localdate()
-            dates = [today+timedelta(days=days) for days in REMINDER_DAYS]
-            due = ExpiryItem.objects.filter(expiry_date__in=dates, user__isnull=False).exclude(user__email="").count()
-            pending = ReminderDelivery.objects.filter(sent_at__isnull=True, expiry_date__gte=today).count()
-            self.stdout.write(f"Dry run: {due} items at reminder dates; {pending} pending deliveries; email configured: {email_is_configured()}")
+            result = reminder_preview()
+            self.stdout.write(f"Dry run: {result['due']} items at reminder dates; {result['pending']} pending deliveries; email configured: {result['email_configured']}")
             return
         if not email_is_configured():
             raise CommandError("Configure the SMTP service and authorized sender before enabling scheduled email.")

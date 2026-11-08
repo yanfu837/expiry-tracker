@@ -6,6 +6,7 @@ from datetime import timedelta
 from smtplib import SMTPException
 from uuid import uuid4
 from email.utils import parseaddr
+from itertools import islice
 
 from django.conf import settings
 from django.core.mail import EmailMessage
@@ -37,21 +38,39 @@ def enqueue_reminders(today):
             ReminderDelivery.objects.get_or_create(item=item, expiry_date=item.expiry_date, days_before=days)
 
 
-def send_reminders(limit=200):
+def reminder_preview():
+    today = timezone.localdate()
+    dates = [today+timedelta(days=days) for days in REMINDER_DAYS]
+    return {
+        "date": today.isoformat(),
+        "due": ExpiryItem.objects.filter(expiry_date__in=dates, user__isnull=False).exclude(user__email="").count(),
+        "pending": ReminderDelivery.objects.filter(sent_at__isnull=True, expiry_date__gte=today).count(),
+        "email_configured": email_is_configured(),
+    }
+
+
+def ready_deliveries(today, now):
+    return ReminderDelivery.objects.filter(
+        sent_at__isnull=True, retry_at__lte=now, expiry_date__gte=today, item__user__isnull=False,
+    ).exclude(item__user__email="").filter(Q(lease_until__isnull=True) | Q(lease_until__lte=now))
+
+
+def send_reminders(limit=200, max_accounts=None):
     today = timezone.localdate()
     enqueue_reminders(today)
     now = timezone.now()
     # Do not send stale reminders after an item's expiry date was edited.
     ReminderDelivery.objects.filter(sent_at__isnull=True).exclude(expiry_date=F("item__expiry_date")).delete()
-    candidates = ReminderDelivery.objects.filter(
-        sent_at__isnull=True, retry_at__lte=now, expiry_date__gte=today, item__user__isnull=False,
-    ).exclude(item__user__email="").filter(Q(lease_until__isnull=True) | Q(lease_until__lte=now))
+    candidates = ready_deliveries(today, now)
     groups = defaultdict(list)
     for pk, user_id in candidates.order_by("pk").values_list("pk", "item__user_id")[:limit]:
         groups[user_id].append(pk)
     sent = 0
     failed = 0
-    for user_id, ids in groups.items():
+    # HTTP-triggered runs send one account's digest at a time so a slow SMTP
+    # connection cannot hold a web worker across many accounts.
+    account_groups = groups.items() if max_accounts is None else islice(groups.items(), max_accounts)
+    for user_id, ids in account_groups:
         token = uuid4()
         claimed_at = timezone.now()
         ReminderDelivery.objects.filter(
@@ -92,4 +111,7 @@ def send_reminders(limit=200):
             logger.warning("Reminder delivery for account %s will be retried (%s)", deliveries[0].item.user_id, type(error).__name__)
         else:
             sent += records.update(sent_at=timezone.now(), lease_until=None, lease_token=None, last_error="")
-    return {"sent": sent, "failed": failed, "pending": ReminderDelivery.objects.filter(sent_at__isnull=True, expiry_date__gte=today).count()}
+    return {
+        "sent": sent, "failed": failed, "ready": ready_deliveries(today, timezone.now()).count(),
+        "pending": ReminderDelivery.objects.filter(sent_at__isnull=True, expiry_date__gte=today).count(),
+    }

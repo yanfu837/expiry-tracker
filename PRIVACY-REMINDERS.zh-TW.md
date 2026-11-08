@@ -1,5 +1,7 @@
 # 私人附件與提醒信修正版
 
+免費 GitHub Actions 每日提醒與寄信設定，請以新增的 [EMAIL-SCHEDULE.zh-TW.md](EMAIL-SCHEDULE.zh-TW.md) 為準；下方「稍後啟用」記錄的是前一版尚未啟用寄信時的部署狀態。
+
 ## 本次變更
 
 - 附件存成 Cloudinary authenticated raw 類型；檔案名稱使用隨機識別碼。

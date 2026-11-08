@@ -1,82 +1,32 @@
+from datetime import timedelta
+
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
-from django.core.mail import send_mail
-from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User
-
-from expiry.models import ExpiryItem
+from expiry.deletions import cleanup_documents
+from expiry.models import ExpiryItem, ReminderDelivery
+from expiry.reminders import REMINDER_DAYS, email_is_configured, send_reminders
 
 
 class Command(BaseCommand):
-    help = "Send expiry reminder emails at 30, 14, 7, and 1 days before expiry"
+    help = "Send 30/14/7/1-day reminders once per item and expiry date; retry failed deliveries."
+
+    def add_arguments(self, parser):
+        parser.add_argument("--dry-run", action="store_true", help="Report counts without sending mail or changing records.")
+        parser.add_argument("--limit", type=int, default=200)
 
     def handle(self, *args, **options):
-
-        today = timezone.localdate()
-
-        # Only send reminders on these exact days
-        reminder_days = [30, 14, 7, 1]
-
-        # Get all users who have an email address
-        users = User.objects.exclude(email="")
-
-        for user in users:
-
-            # Get this user's expiry items
-            items = ExpiryItem.objects.filter(
-                user=user
-            )
-
-            reminder_items = []
-
-            # Check each item
-            for item in items:
-
-                days_remaining = (
-                    item.expiry_date - today
-                ).days
-
-                # Only include items with exactly
-                # 30, 14, 7, or 1 day remaining
-                if days_remaining in reminder_days:
-                    reminder_items.append(
-                        (item, days_remaining)
-                    )
-
-            # If this user has nothing to remind today,
-            # skip sending email
-            if not reminder_items:
-                continue
-
-            # Build email message
-            message = "You have upcoming expiry reminders:\n\n"
-
-            for item, days_remaining in reminder_items:
-
-                message += (
-                    f"{item.name} — "
-                    f"{days_remaining} days remaining\n"
-                    f"Expiry date: {item.expiry_date}\n\n"
-                )
-
-            # Email subject
-            subject = (
-                f"Expiry Tracker: "
-                f"{len(reminder_items)} expiry reminder(s)"
-            )
-
-            # Send email to this user
-            send_mail(
-                subject,
-                message,
-                None,
-                [user.email],
-                fail_silently=False,
-            )
-
-            # Show success message in Terminal
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Reminder sent to {user.email}"
-                )
-            )
+        if options["dry_run"]:
+            today = timezone.localdate()
+            dates = [today+timedelta(days=days) for days in REMINDER_DAYS]
+            due = ExpiryItem.objects.filter(expiry_date__in=dates, user__isnull=False).exclude(user__email="").count()
+            pending = ReminderDelivery.objects.filter(sent_at__isnull=True, expiry_date__gte=today).count()
+            self.stdout.write(f"Dry run: {due} items at reminder dates; {pending} pending deliveries; email configured: {email_is_configured()}")
+            return
+        if not email_is_configured():
+            raise CommandError("Configure the SMTP service and authorized sender before enabling scheduled email.")
+        cleanup_documents(limit=50)
+        result = send_reminders(limit=max(1, min(options["limit"], 1000)))
+        self.stdout.write(f"Sent: {result['sent']}; failed: {result['failed']}; pending: {result['pending']}")
+        if result["failed"]:
+            raise CommandError("Some email deliveries failed; they remain queued for retry.")

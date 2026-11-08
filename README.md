@@ -28,7 +28,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-Visit <http://127.0.0.1:8000/>. Development uses local SQLite and local file uploads. Password reset emails are printed in the terminal with the example console mail backend; no real emails are sent.
+Visit <http://127.0.0.1:8000/>. Development uses local SQLite and local file uploads. Email features display an unavailable message until SMTP credentials are configured. Automated tests exercise email flows using an isolated in-memory mail backend.
 
 ## Update the existing Render service
 
@@ -84,19 +84,32 @@ DEFAULT_FROM_EMAIL=<a sender authorized by your SMTP provider>
 
 Keep these values in Render's environment settings. Gmail requires an app password. Confirm that your Render service plan and email provider allow the configured SMTP connection; automated tests use an in-memory mail backend and do not establish production email deliverability.
 
-Users can send an upcoming-items summary with **Email upcoming items**. This requires an explicit POST and uses the saved account email. To enable automatic reminders, configure an external daily scheduler to run:
+Users can request an upcoming-items summary when email is configured. Automatic reminders use a durable delivery record per item, expiry date and threshold (30, 14, 7 or 1 days). Normal same-day reruns skip successful deliveries. Failed sends stay queued with backoff, and one account's failure does not stop the others. Updated expiry dates create a new delivery key. Concurrent runs claim short-lived leases before sending each account's digest.
+
+Configure a scheduler only when SMTP is ready and its cost is approved. Run:
 
 ```sh
+python manage.py cleanup_documents
 python manage.py send_expiry_reminders
 ```
 
-Use the same database and SMTP settings. The command sends reminders when items are exactly 30, 14, 7 or 1 day away, using `TIME_ZONE`. Run it once per day; scheduling and duplicate-run tracking are not configured by this repository.
+A Render daily cron expression of `0 1 * * *` runs at 09:00 Asia/Taipei. Use the same database, secret key, timezone, SMTP settings and Cloudinary settings as the web service. Failed deliveries retry on a later invocation; for more frequent retries, choose an appropriate hourly schedule. A missed scheduler run can miss an exact-day trigger. Successful SMTP acceptance followed by a process crash before the database acknowledgement can still cause a retry: SMTP does not offer an atomic transaction with the database.
 
-### Attachments
+Preview eligibility without sending or writing records:
 
-For persistent uploads on Render, retain or configure all three Cloudinary credentials (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`), or use `CLOUDINARY_URL`. Files remain on the existing Cloudinary account. Without persistent storage configured on Render, new uploads show a validation message; records can still be saved without a file.
+```sh
+python manage.py send_expiry_reminders --dry-run
+```
 
-The form accepts the listed PDF/image/Office extensions, checks the declared MIME type against the extension, and enforces 10 MB. These metadata checks do not inspect file contents or scan for malware. Existing Cloudinary URLs retain their current access configuration; this change does not make previously public files private.
+### Private documents and deletion
+
+PDF/image/Office uploads are stored as Cloudinary **authenticated raw** assets with opaque names. The app never renders their origin URL. The `documents/<item-id>/download/` route checks login and ownership, fetches the signed source on the server, and responds as an attachment with `Cache-Control: private, no-store`. Local development uses private filesystem storage with no public `/media/` route.
+
+On deployment, `secure_existing_documents` converts referenced legacy files and app-tagged legacy assets under `media/documents/` to authenticated delivery. The conversion preserves bytes and uses a stable destination so a retry can recover after a successful provider rename. Previously shared public links are revoked; CDN invalidation is requested. Legacy files without a matching database item are preserved privately for operator review, not automatically erased.
+
+A committed item deletion, cleared attachment, replaced attachment or account deletion queues removal of the stored file. The app attempts deletion after commit, retaining failed jobs for retry with provider cache invalidation. Rolled-back database changes keep the file. Run `python manage.py cleanup_documents` to retry pending work; startup also processes a bounded batch. Until a retry succeeds, an orphaned file can remain in private provider storage even though the application's download route no longer exposes it.
+
+The form enforces 10 MB and matches declared MIME types to approved extensions; it does not scan for malware. Private access controls do not provide end-to-end encryption, erase a copy somebody already downloaded, or eliminate provider backup/cache retention. The public **Privacy & data** page describes these boundaries.
 
 ## Verification
 

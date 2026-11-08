@@ -33,6 +33,12 @@ django.db.utils.OperationalError: failed to resolve host '...':
 
 本 PR 修復程式問題並補上部署流程；修改程式碼不會自動更新現有 Render 的 `DATABASE_URL` 或修復資料庫服務狀態。
 
+### 免費資料庫的期限
+
+依目前 Render 規則，免費 PostgreSQL 在建立 30 天後到期，之後有 14 天可升級續用；超過寬限期會刪除資料庫與資料。免費方案不提供備份。若採用空白重建，必須重新建立帳號及到期項目；新資料庫不會自動帶回舊資料。
+
+請在到期前安排資料匯出或改用適合長期保存資料的方案。以實際資料庫頁面的到期時間為準，參考 [Render 免費方案說明](https://render.com/docs/free#free-postgres)。
+
 ## 1. 將修正版放進目前的 GitHub 專案
 
 檢視並合併修正 PR 後，再部署至目前的 Render 服務。若使用本機 Git，可以取得修正分支後檢視差異。
@@ -49,6 +55,8 @@ Start Command: bash start.sh
 ```
 
 不要建立另一個網站或另一個資料庫來取代現有資料。
+
+本次檢查發現現有服務的 Build Command 已包含 `migrate`；線上錯誤發生在資料庫主機名稱解析。先修復連線，再套用部署命令。
 
 ## 3. 檢查 Environment
 

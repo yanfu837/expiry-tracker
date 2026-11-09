@@ -10,6 +10,10 @@
     <h2>Who can access it</h2>
     <p>Other accounts cannot view or change your items. Document downloads require your login and ownership of the item. Account credentials and downloads are protected in transit by HTTPS.</p>
     <p>The service uses Render for hosting and database storage, and Cloudinary for documents. People with authorized administration or provider access may access stored information. The service does not provide end-to-end encryption.</p>
+    <h2>Private scanning and automatic field suggestions</h2>
+    <p>New attachments require a successful scan on the operator's private document-processing service before permanent storage. If that service is unavailable, new attachments are blocked. Existing files are not automatically rescanned.</p>
+    <p>When you choose a new file, local OCR and document parsing can suggest a name, expiry date and notes. The document is not sent to an external AI API or a public malware-analysis service. Processing uses a temporary private copy that is removed when the request ends. The confirmed attachment is stored in Cloudinary as described above.</p>
+    <p>Supported formats and processing limits apply. Scanning does not guarantee that a file is harmless, and recognition can be incorrect. Review the suggested information before saving; ambiguous or missing dates require your input.</p>
     <h2>Deleting or replacing a document</h2>
     <p>Deleting an item removes it from your account. Deleting, clearing or replacing a document schedules its stored file for deletion after the database change succeeds. Failed storage deletions are kept for retry. Copies already downloaded, provider caches and backups may follow separate retention processes.</p>
     <h2>Keeping your account secure</h2>

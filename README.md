@@ -105,13 +105,15 @@ python manage.py send_expiry_reminders --dry-run
 
 ### Private documents and deletion
 
+Self-hosted scanning and automatic field suggestions are documented in [PRIVATE-DOCUMENT-AI.zh-TW.md](PRIVATE-DOCUMENT-AI.zh-TW.md). Prepare the private service before deploying this revision: new attachments require its clean scan, and are rejected when it is unavailable. The browser can preview locally extracted name, expiry date and notes before saving. No external AI API is used; confirmed attachments retain the existing private Cloudinary storage. Supported files are limited to common PDF, image, Office, TXT and CSV formats, with bounded OCR and parsing; uncertain dates require manual review.
+
 PDF/image/Office uploads are stored as Cloudinary **authenticated raw** assets with opaque names. The app never renders their origin URL. The `documents/<item-id>/download/` route checks login and ownership, fetches the signed source on the server, and responds as an attachment with `Cache-Control: private, no-store`. Local development uses private filesystem storage with no public `/media/` route.
 
 On deployment, `secure_existing_documents` converts referenced legacy files and app-tagged legacy assets under `media/documents/` to authenticated delivery. The conversion preserves bytes and uses a stable destination so a retry can recover after a successful provider rename. Previously shared public links are revoked; CDN invalidation is requested. Legacy files without a matching database item are preserved privately for operator review, not automatically erased.
 
 A committed item deletion, cleared attachment, replaced attachment or account deletion queues removal of the stored file. The app attempts deletion after commit, retaining failed jobs for retry with provider cache invalidation. Rolled-back database changes keep the file. Run `python manage.py cleanup_documents` to retry pending work; startup also processes a bounded batch. Until a retry succeeds, an orphaned file can remain in private provider storage even though the application's download route no longer exposes it.
 
-The form enforces 10 MB and matches declared MIME types to approved extensions; it does not scan for malware. Private access controls do not provide end-to-end encryption, erase a copy somebody already downloaded, or eliminate provider backup/cache retention. The public **Privacy & data** page describes these boundaries.
+The form enforces 10 MB and approved extensions/MIME types. The private service scans before parsing and checks file signatures; existing attachments are not automatically rescanned. Scanning cannot guarantee that a document is harmless. Private access controls do not provide end-to-end encryption, erase a copy somebody already downloaded, or eliminate provider backup/cache retention. The public **Privacy & data** page describes these boundaries.
 
 ## Verification
 

@@ -48,6 +48,10 @@ button:hover, .button:hover { background: #043c4e; color: #fff; }
 .thirty .status { color: #963d0c; }
 .ninety .status { color: #785810; }
 .notes { white-space: pre-wrap; overflow-wrap: anywhere; }
+.document-assistant { padding: 1rem; margin: 1rem 0; background: #edf6f9; border: 1px solid #abc9d3; border-radius: .5rem; }
+.document-assistant h2 { margin-top: 0; }
+.document-assistant ul { padding-left: 1.3rem; }
+button:disabled { opacity: .6; cursor: wait; }
 .empty { color: #4a5c6a; }
 footer { padding: 1.5rem 1rem; text-align: center; color: #4a5c6a; font-size: .85rem; }
 @media (max-width: 560px) {

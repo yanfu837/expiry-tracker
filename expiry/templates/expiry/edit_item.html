@@ -3,6 +3,7 @@
 {% block content %}
 <section class="panel form-panel">
     <h1>Edit expiry item</h1>
+    {% include 'expiry/document_assistant.html' %}
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {% include 'expiry/form_fields.html' %}

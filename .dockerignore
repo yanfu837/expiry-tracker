@@ -1,0 +1,5 @@
+**
+!document_service
+!document_service/**
+**/__pycache__
+**/*.pyc

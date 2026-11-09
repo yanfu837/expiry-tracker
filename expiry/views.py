@@ -9,13 +9,15 @@ from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST, require_safe
 from django.utils.text import slugify
+from django.views.decorators.cache import never_cache
 
-from .forms import AccountEmailForm, ExpiryItemForm, RegistrationForm
+from .forms import AccountEmailForm, DocumentAnalysisForm, ExpiryItemForm, RegistrationForm
+from .document_processing import DocumentProcessingError, make_scan_token, process_upload, processor_configured
 from .models import ExpiryItem
 from .storage import DocumentStorageError
 from .reminders import email_is_configured
@@ -57,18 +59,18 @@ def dashboard(request):
 
 @login_required
 def add_item(request):
-    form = ExpiryItemForm(request.POST if request.method == "POST" else None, request.FILES or None)
+    form = ExpiryItemForm(request.POST if request.method == "POST" else None, request.FILES or None, user=request.user)
     if request.method == "POST" and form.is_valid():
         item = form.save(commit=False)
         item.user = request.user
         try:
             item.save()
-        except DocumentStorageError:
-            form.add_error("document", "The document could not be saved. Please try again later.")
+        except (DocumentStorageError, DocumentProcessingError):
+            form.add_error("document", "The document could not be safely saved. Please try again later.")
         else:
             messages.success(request, "Expiry item added.")
             return redirect("dashboard")
-    return render(request, "expiry/add_item.html", {"form": form})
+    return render(request, "expiry/add_item.html", {"form": form, "processor_available": processor_configured()})
 
 
 @login_required
@@ -78,16 +80,51 @@ def edit_item(request, item_id):
         request.POST if request.method == "POST" else None,
         request.FILES or None,
         instance=item,
+        user=request.user,
     )
     if request.method == "POST" and form.is_valid():
         try:
             form.save()
-        except DocumentStorageError:
-            form.add_error("document", "The document could not be saved. Please try again later.")
+        except (DocumentStorageError, DocumentProcessingError):
+            form.add_error("document", "The document could not be safely saved. Please try again later.")
         else:
             messages.success(request, "Expiry item updated.")
             return redirect("dashboard")
-    return render(request, "expiry/edit_item.html", {"form": form, "item": item})
+    return render(request, "expiry/edit_item.html", {"form": form, "item": item, "processor_available": processor_configured()})
+
+
+@login_required
+@never_cache
+@require_POST
+def analyze_document(request):
+    form = DocumentAnalysisForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return JsonResponse({"error": "invalid_file", "message": "請選擇支援的文件，大小限 10 MB。"}, status=400)
+    document = form.cleaned_data["document"]
+    try:
+        payload = process_upload(document, extract=True)
+        fields = payload.get("fields", {})
+        # Treat the private service's result as suggestions, never trusted HTML.
+        name = fields.get("name")
+        if not isinstance(name, str) or not name.strip():
+            name = PurePosixPath(document.name).stem
+        expiry_date = fields.get("expiry_date")
+        if expiry_date is not None:
+            from datetime import date
+            expiry_date = date.fromisoformat(expiry_date).isoformat()
+        notes = fields.get("notes", "")
+        warnings = fields.get("warnings", [])
+        if not isinstance(notes, str) or not isinstance(warnings, list) or not all(isinstance(w, str) for w in warnings):
+            raise ValueError()
+        result = {"name": name[:200], "expiry_date": expiry_date, "notes": notes[:10000],
+                  "warnings": [w[:400] for w in warnings[:5]], "evidence": str(fields.get("evidence", ""))[:600],
+                  "method": "本機 OCR 與欄位規則擷取"}
+        return JsonResponse({"fields": result, "scan_token": make_scan_token(document, request.user.pk)})
+    except DocumentProcessingError as error:
+        status = 422 if error.code in {"infected", "invalid_file"} else 503
+        return JsonResponse({"error": error.code, "message": str(error)}, status=status)
+    except (TypeError, ValueError, AttributeError):
+        return JsonResponse({"error": "unavailable", "message": "辨識結果無法使用，請稍後再試。"}, status=503)
 
 
 @login_required

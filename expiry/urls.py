@@ -5,6 +5,7 @@ from . import views
 from .scheduled_reminders import run_scheduled_reminders
 
 urlpatterns = [
+    path("documents/analyze/", views.analyze_document, name="analyze_document"),
     path("internal/reminders/run/", run_scheduled_reminders, name="scheduled_reminders"),
     path("", views.dashboard, name="dashboard"),
     path("add/", views.add_item, name="add_item"),

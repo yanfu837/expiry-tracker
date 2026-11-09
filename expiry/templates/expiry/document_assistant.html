@@ -1,0 +1,16 @@
+{% load static %}
+<aside class="document-assistant" data-analyze-url="{% url 'analyze_document' %}" data-available="{{ processor_available|yesno:'true,false' }}" aria-label="文件掃毒與自動辨識">
+    <h2>文件掃毒與自動帶入</h2>
+    {% if processor_available %}
+        <p>選擇文件後，系統會先掃毒，再於私人伺服器辨識名稱、到期日與備註。請核對帶入的資料後再儲存。</p>
+        <p class="helptext">文件不會送往外部 AI 服務。支援 PDF、圖片、Word、Excel、TXT、CSV，限 10 MB；PDF 最多辨識前 10 頁。已手動修改的欄位會保留。</p>
+        <button type="button" class="secondary" id="analyze-document" disabled>重新辨識文件</button>
+    {% else %}
+        <p>私人掃毒與辨識服務尚未啟用，目前無法儲存新附件。仍可手動建立沒有附件的項目，或保留原有附件。</p>
+    {% endif %}
+    <p id="document-analysis-status" role="status" aria-live="polite"></p>
+    <ul id="document-analysis-warnings"></ul>
+    <p id="document-analysis-evidence" class="helptext"></p>
+    {% if form.is_bound and form.errors %}<p>若本次有選擇新檔案，請重新選擇；未通過表單驗證的附件不會儲存。</p>{% endif %}
+</aside>
+<script src="{% static 'expiry/document-assistant.js' %}" defer></script>

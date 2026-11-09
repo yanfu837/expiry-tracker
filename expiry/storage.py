@@ -12,6 +12,7 @@ from django.conf import settings
 from django.core.files import File
 from django.core.files.storage import FileSystemStorage, Storage
 from django.utils.deconstruct import deconstructible
+from .document_processing import process_upload
 
 PRIVATE_PREFIX = "expiry-tracker-private/"
 MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
@@ -28,6 +29,7 @@ class PrivateFileSystemStorage(FileSystemStorage):
         raise ValueError("Use the protected document download view.")
 
     def _save(self, name, content):
+        process_upload(content)
         return super()._save(PRIVATE_PREFIX + uuid4().hex + PurePosixPath(name).suffix.lower(), content)
 
 
@@ -48,6 +50,7 @@ class PrivateCloudinaryStorage(Storage):
         return name
 
     def _save(self, name, content):
+        process_upload(content)
         public_id = PRIVATE_PREFIX + uuid4().hex + PurePosixPath(name).suffix.lower()
         try:
             response = cloudinary.uploader.upload(

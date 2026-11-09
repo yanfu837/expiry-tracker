@@ -1,8 +1,16 @@
 from django.contrib import admin
 from .models import DocumentDeletion, ExpiryItem, ReminderDelivery
+from .forms import ExpiryItemForm
 
-admin.site.register(ExpiryItem)
-# Register your models here.
+
+class AdminExpiryItemForm(ExpiryItemForm):
+    class Meta(ExpiryItemForm.Meta):
+        fields = ["user", *ExpiryItemForm.Meta.fields]
+
+
+@admin.register(ExpiryItem)
+class ExpiryItemAdmin(admin.ModelAdmin):
+    form = AdminExpiryItemForm
 
 
 @admin.register(DocumentDeletion)

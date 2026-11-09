@@ -123,6 +123,12 @@ if email_backend == "django.core.mail.backends.smtp.EmailBackend":
         "timeout": 15,
     }
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL") or os.getenv("EMAIL_HOST_USER") or "webmaster@localhost"
+# GitHub Actions can only trigger reminders after these non-secret trust settings
+# are explicitly configured. SMTP and database credentials stay on Render.
+REMINDER_OIDC_AUDIENCE = os.getenv("REMINDER_OIDC_AUDIENCE", "")
+REMINDER_OIDC_REPOSITORY_ID = os.getenv("REMINDER_OIDC_REPOSITORY_ID", "")
+REMINDER_OIDC_OWNER_ID = os.getenv("REMINDER_OIDC_OWNER_ID", "")
+REMINDER_OIDC_WORKFLOW_REF = os.getenv("REMINDER_OIDC_WORKFLOW_REF", "")
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "login"

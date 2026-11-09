@@ -1,0 +1,98 @@
+name: Daily expiry reminders
+
+on:
+  schedule:
+    - cron: '0 1 * * *' # 09:00 Asia/Taipei; GitHub may start a run later.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview counts without sending email or writing deliveries
+        type: boolean
+        default: true
+
+permissions: {}
+
+concurrency:
+  group: expiry-reminders-production
+  cancel-in-progress: false
+
+jobs:
+  reminders:
+    if: github.repository == 'yanfu837/expiry-tracker' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      id-token: write
+    env:
+      DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+    steps:
+      # No checkout, database access, SMTP password, or long-lived API token.
+      - name: Trigger reminders with GitHub's short-lived identity
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          endpoint = 'https://expiry-tracker-rrqh.onrender.com/internal/reminders/run/'
+          dry_run = os.environ['DRY_RUN'] == 'true'
+
+          def trigger():
+              identity_url = os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']
+              separator = '&' if '?' in identity_url else '?'
+              identity_url += separator + urllib.parse.urlencode({'audience': endpoint})
+              identity_request = urllib.request.Request(identity_url, headers={
+                  'Authorization': 'Bearer ' + os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN'],
+              })
+              with urllib.request.urlopen(identity_request, timeout=15) as response:
+                  token = json.load(response)['value']
+              # Never print the JWT, response body, recipient, or item details.
+              request = urllib.request.Request(endpoint,
+                  data=json.dumps({'dry_run': dry_run}).encode(), method='POST', headers={
+                      'Authorization': 'Bearer ' + token,
+                      'Content-Type': 'application/json',
+                  })
+              with urllib.request.urlopen(request, timeout=40) as response:
+                  return json.load(response)
+
+          sent = failed = 0
+          for batch in range(200):
+              for attempt in range(3):
+                  try:
+                      result = trigger()
+                      break
+                  except urllib.error.HTTPError as error:
+                      # Inspect only a fixed machine error code; don't log bodies.
+                      try:
+                          code = json.loads(error.read(1024)).get('error', '')
+                      except (ValueError, AttributeError):
+                          code = ''
+                      if code in {'email_not_configured', 'scheduler_not_configured'}:
+                          raise SystemExit('Reminders are not enabled: finish the Render email/scheduler settings.')
+                      if error.code not in {408, 429, 502, 503, 504} or attempt == 2:
+                          raise SystemExit(f'Reminder request failed (HTTP {error.code}).')
+                  except (urllib.error.URLError, TimeoutError, OSError):
+                      if attempt == 2:
+                          raise SystemExit('Cannot reach the reminder service or identity provider.')
+                  except (ValueError, KeyError):
+                      raise SystemExit('Invalid response from the reminder service or identity provider.')
+                  time.sleep(5 * (attempt + 1))
+              if dry_run:
+                  print(f"Preview for {result['date']}: due={result['due']}, pending={result['pending']}, email_configured={result['email_configured']}")
+                  break
+              sent += result['sent']
+              failed += result['failed']
+              print(f"Batch {batch + 1}: sent={result['sent']}, failed={result['failed']}, pending={result['pending']}")
+              if result['ready'] == 0:
+                  break
+          else:
+              raise SystemExit('Batch limit reached; pending deliveries remain queued.')
+          if failed:
+              raise SystemExit(f'{failed} reminder deliveries failed and remain queued for retry.')
+          if not dry_run:
+              print(f'Done: {sent} reminders accepted for delivery.')
+          PY

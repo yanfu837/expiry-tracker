@@ -60,7 +60,7 @@ Required production environment values:
 | `DATABASE_URL` | The Internal Database URL of the existing PostgreSQL database. |
 | `ALLOWED_HOSTS` | The exact service hostname, plus any custom domains. Render's external hostname is also added automatically. |
 | `CSRF_TRUSTED_ORIGINS` | Comma-separated HTTPS origins for any custom domains. Render's external URL is added automatically. |
-| `TIME_ZONE` | Your business timezone, e.g. `Asia/Taipei`; default `UTC`. |
+| `TIME_ZONE` | Your business timezone; default `Asia/Taipei`. |
 
 Do not commit `.env` or database credentials. Do not replace or recreate an existing database to fix missing migrations. Render's local SQLite files are ephemeral, so the app refuses to start on Render without an explicit `DATABASE_URL`.
 
@@ -86,14 +86,16 @@ Keep these values in Render's environment settings. Gmail requires an app passwo
 
 Users can request an upcoming-items summary when email is configured. Automatic reminders use a durable delivery record per item, expiry date and threshold (30, 14, 7 or 1 days). Normal same-day reruns skip successful deliveries. Failed sends stay queued with backoff, and one account's failure does not stop the others. Updated expiry dates create a new delivery key. Concurrent runs claim short-lived leases before sending each account's digest.
 
-Configure a scheduler only when SMTP is ready and its cost is approved. Run:
+The free daily GitHub Actions workflow triggers the existing web service at 09:00 Asia/Taipei using short-lived GitHub OIDC identity. Database, SMTP and storage credentials stay on Render. The endpoint validates the immutable repository and owner IDs, exact workflow, branch, audience, signature and token expiry. It sends one account digest per request and returns counts only. See [EMAIL-SCHEDULE.zh-TW.md](EMAIL-SCHEDULE.zh-TW.md) for the required trust settings, SMTP setup and safe preview. The workflow supports manual dry runs and resumes pending batches without resending recorded successes. Public-repository schedules can be delayed or skipped and are disabled after 60 days without repository activity.
+
+For an independently configured scheduler, run:
 
 ```sh
 python manage.py cleanup_documents
 python manage.py send_expiry_reminders
 ```
 
-A Render daily cron expression of `0 1 * * *` runs at 09:00 Asia/Taipei. Use the same database, secret key, timezone, SMTP settings and Cloudinary settings as the web service. Failed deliveries retry on a later invocation; for more frequent retries, choose an appropriate hourly schedule. A missed scheduler run can miss an exact-day trigger. Successful SMTP acceptance followed by a process crash before the database acknowledgement can still cause a retry: SMTP does not offer an atomic transaction with the database.
+A Render daily cron expression of `0 1 * * *` runs at 09:00 Asia/Taipei. A Render Cron Job is a separate paid service; it is not required by the GitHub Actions workflow. If you choose it, use the same database, secret key, timezone, SMTP settings and Cloudinary settings as the web service. Failed deliveries retry on a later invocation. A missed scheduler run can miss an exact-day trigger. Successful SMTP acceptance followed by a process crash before the database acknowledgement can still cause a retry: SMTP does not offer an atomic transaction with the database.
 
 Preview eligibility without sending or writing records:
 

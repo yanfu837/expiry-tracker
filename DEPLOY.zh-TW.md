@@ -2,6 +2,8 @@
 
 私人附件、刪檔重試與提醒防重複的最新設定，請另見 [PRIVACY-REMINDERS.zh-TW.md](PRIVACY-REMINDERS.zh-TW.md)。
 
+自動寄信與免費每日排程的目前設定，請見 [EMAIL-SCHEDULE.zh-TW.md](EMAIL-SCHEDULE.zh-TW.md)。
+
 這份程式碼以 GitHub `main` 的 `cb81a89` 為基礎。修正版完成本機驗證後，仍需要更新 GitHub 與現有 Render 服務，線上網站才會套用。
 
 ## 已修正

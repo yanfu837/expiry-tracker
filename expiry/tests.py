@@ -210,7 +210,7 @@ class ReminderTests(TestCase):
 
     def test_daily_command_uses_local_date_and_exact_reminder_days(self):
         ExpiryItem.objects.create(user=self.user, name="Not due for reminder", expiry_date=self.today + timedelta(days=8))
-        with patch("expiry.management.commands.send_expiry_reminders.timezone.localdate", return_value=self.today):
+        with patch("expiry.reminders.timezone.localdate", return_value=self.today):
             call_command("send_expiry_reminders", stdout=StringIO())
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn(self.due.name, mail.outbox[0].body)

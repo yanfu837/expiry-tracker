@@ -80,8 +80,8 @@ def application(environ, start_response):
                     payload["fields"] = extract_fields(text, warnings)
                 except ProcessingFailure:
                     payload["fields"] = {"name": None, "expiry_date": None, "notes": "", "evidence": "",
-                                         "warnings": ["檔案已通過掃描，但無法自動辨識，請手動填寫。"],
-                                         "method": "本機 OCR 與欄位規則擷取"}
+                                         "warnings": ["The file passed scanning, but extraction was unavailable. Enter the fields manually."],
+                                         "method": "Local OCR and field extraction"}
             return _reply(start_response, "200 OK", payload)
     except ProcessingFailure as error:
         status = "422 Unprocessable Entity" if error.code in {"infected", "invalid_file"} else "503 Service Unavailable"

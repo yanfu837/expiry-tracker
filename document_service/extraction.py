@@ -199,7 +199,7 @@ def read_document(path, deadline):
             raise ProcessingFailure("unsupported")
         count = int(pages.group(1))
         if count > MAX_PAGES:
-            warnings.append(f"只辨識前 {MAX_PAGES} 頁，請確認後續頁面是否還有到期資訊。")
+            warnings.append(f"Only the first {MAX_PAGES} pages were processed. Check later pages for additional expiry information.")
         texts = []
         for number in range(1, min(count, MAX_PAGES)+1):
             result = run_tool(["pdftotext", "-f", str(number), "-l", str(number), "-layout", str(path), "-"], deadline)
@@ -220,7 +220,7 @@ def read_document(path, deadline):
     else:
         text = ocr_image(path, deadline)
     if len(text) >= MAX_TEXT:
-        warnings.append("文件文字過多，只辨識部分內容，請自行核對。")
+        warnings.append("Only part of this long document was processed. Check the full document.")
     return text[:MAX_TEXT], warnings
 
 
@@ -256,9 +256,9 @@ def table_suggestions(text, warnings):
             continue
         records = [row for row in rows[number+1:] if any(cell.strip() for cell in row)]
         if len(records) > 1:
-            warnings.append("表格包含多筆資料，請確認要建立的項目；不同到期日不會自動合併。")
+            warnings.append("This table contains multiple records. Review which items to create; different expiry dates are not combined.")
         if len(records) > 20:
-            warnings.append("僅檢查表格前 20 筆資料，請自行核對後續內容。")
+            warnings.append("Only the first 20 table records were checked. Review the remaining records.")
         return [f"{label}: {row[index]}" for row in records[:20]
                 for label, index in columns.items() if index < len(row) and row[index].strip()]
     return []
@@ -298,9 +298,9 @@ def extract_fields(text, warnings=None):
                 continue
     expiry = next(iter(dates)) if len(dates) == 1 else None
     if not dates:
-        warnings.append("未找到明確標示的到期日，請自行填寫；系統不會以其他日期代替。")
+        warnings.append("No clearly labelled expiry date was found. Enter it manually; another date will not be used instead.")
     elif len(dates) > 1:
-        warnings.append("文件有多個不同的到期日，請自行選擇。")
+        warnings.append("Multiple different expiry dates were found. Choose the correct date.")
     name = None
     for line in lines:
         match = re.match(r"(?:文件名稱|合約名稱|保單名稱|證照名稱|名稱|document\s+(?:title|name)|policy\s+name)\s*[:：]\s*(.+)", line, re.I)
@@ -311,7 +311,7 @@ def extract_fields(text, warnings=None):
         name = next((line[:200] for line in lines[:3] if 3 <= len(line) <= 100
                      and not (_DATE.search(line) or _EXPIRY.search(line) or _PERIOD.search(line))
                      and not re.match(r"(?:備註|注意事項|notes?|remarks?)\s*[:：]", line, re.I)), None)
-    evidence = dates.get(expiry, "")
+    evidence = dates.get(expiry, "") if expiry else "\n".join(dict.fromkeys(dates.values()))[:600]
     notes = ""
     for line in lines:
         match = re.match(r"(?:備註|注意事項|notes?|remarks?)\s*[:：]\s*(.+)", line, re.I)
@@ -319,4 +319,4 @@ def extract_fields(text, warnings=None):
             notes = match[1][:1000]
             break
     return {"name": name, "expiry_date": expiry, "notes": notes, "evidence": evidence,
-            "warnings": warnings[:5], "method": "本機 OCR 與欄位規則擷取"}
+            "warnings": warnings[:5], "method": "Local OCR and field extraction"}

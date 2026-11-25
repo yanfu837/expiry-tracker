@@ -18,10 +18,10 @@ from document_service.formats import MAX_BYTES, MIME_TYPES
 _capacity = BoundedSemaphore(1)
 _SALT = "expiry.document-scan.v1"
 MESSAGES = {
-    "unavailable": "私人掃毒服務尚未設定或暫時無法使用，檔案未儲存。請稍後再試。",
-    "infected": "檔案未通過安全掃描，已停止處理，請改用其他檔案。",
-    "invalid_file": "檔案格式或內容無法處理。請使用支援的文件格式，大小限 10 MB。",
-    "busy": "系統正在處理其他文件，請稍後重試。",
+    "unavailable": "The private scanning service is not configured or is unavailable. The file was not saved. Try again later.",
+    "infected": "The file failed the security scan. Processing stopped. Please use another file.",
+    "invalid_file": "This file cannot be processed. Use a supported document format, up to 10 MB.",
+    "busy": "The service is processing another document. Please try again shortly.",
 }
 
 
@@ -40,6 +40,24 @@ class ScanProof:
 
 def processor_configured():
     return bool(settings.DOCUMENT_PROCESSOR_URL and len(settings.DOCUMENT_PROCESSOR_TOKEN) >= 32)
+
+
+def field_suggestions(payload, filename):
+    """Validate suggestions as data before returning or staging them for review."""
+    from datetime import date
+    fields = payload.get("fields", {})
+    name = fields.get("name")
+    if not isinstance(name, str) or not name.strip():
+        name = PurePosixPath(filename).stem
+    expiry = fields.get("expiry_date")
+    if expiry is not None:
+        expiry = date.fromisoformat(expiry).isoformat()
+    notes, warnings = fields.get("notes", ""), fields.get("warnings", [])
+    if not isinstance(notes, str) or not isinstance(warnings, list) or not all(isinstance(w, str) for w in warnings):
+        raise ValueError("Invalid suggestions")
+    return {"name": name[:200], "expiry_date": expiry, "notes": notes[:10000],
+            "warnings": [w[:400] for w in warnings[:5]], "evidence": str(fields.get("evidence", ""))[:600],
+            "method": "Local OCR and field extraction"}
 
 
 def read_upload(upload):

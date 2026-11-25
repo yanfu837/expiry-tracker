@@ -1,19 +1,32 @@
 {% extends 'expiry/base.html' %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Expiry list{% endblock %}
 {% block content %}
-<h1>Expiry Tracker for Small Business</h1>
-<p class="intro">Keep track of licenses, insurance, contracts, permits and important business documents.</p>
+<h1>Your expiry list</h1>
+<p class="intro">Find expiry dates and keep your documents up to date, on your phone or computer.</p>
 {% if not user.email %}
     <p class="message">Add an email address in <a href="{% url 'account_email' %}">Email settings</a> to enable reminders and password recovery.</p>
 {% endif %}
 <div class="actions">
     <a class="button" href="{% url 'add_item' %}">+ Add expiry item</a>
+    <a class="button secondary" href="{% url 'batch_import' %}">Import documents</a>
     {% if email_available %}<form method="post" action="{% url 'test_email' %}">
         {% csrf_token %}
         <button class="secondary" type="submit">Email upcoming items</button>
     </form>{% endif %}
 </div>
 {% if not email_available %}<p class="message">Email reminders are not enabled yet. You can continue managing your dates and documents here.</p>{% endif %}
+<form method="get" class="panel search-filters" role="search" aria-label="Find expiry items">
+    <div class="search-field"><label for="item-search">Search items</label><input id="item-search" type="search" name="q" value="{{ query }}" maxlength="200" placeholder="Search names or notes"></div>
+    <div><label for="expiry-window">Expiry period</label><select id="expiry-window" name="window">
+        <option value="all" {% if window == 'all' %}selected{% endif %}>All dates</option>
+        <option value="expired" {% if window == 'expired' %}selected{% endif %}>Expired</option>
+        <option value="30" {% if window == '30' %}selected{% endif %}>Within 30 days</option>
+        <option value="90" {% if window == '90' %}selected{% endif %}>31–90 days</option>
+        <option value="later" {% if window == 'later' %}selected{% endif %}>Later than 90 days</option>
+    </select></div>
+    <button type="submit">Search</button>{% if has_filters %}<a href="{% url 'dashboard' %}">Clear filters</a>{% endif %}
+</form>
+<p class="helptext" role="status">{{ total_items }} item{{ total_items|pluralize }}{% if has_filters %} matching your filters{% endif %}.</p>
 {% for section in sections %}
     <section class="group" aria-labelledby="heading-{{ section.id }}">
         <h2 id="heading-{{ section.id }}">{{ section.title }} <span class="count">{{ section.items|length }}</span></h2>

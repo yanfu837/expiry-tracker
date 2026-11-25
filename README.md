@@ -105,6 +105,8 @@ python manage.py send_expiry_reminders --dry-run
 
 ### Private documents and deletion
 
+Batch import supports up to 10 selected files, 10 MB each and 50 MB total, processed sequentially with per-file progress and retries. The review table requires explicit confirmation and a valid date before creating each expiry matter. Drafts are stored separately and never enter reminder delivery; per-row leases and a durable saved receipt make retries idempotent. One source file can supply multiple independently reviewed matters. See [BATCH-IMPORT.md](BATCH-IMPORT.md) for the workflow, limits, 24-hour draft retention and the new migration.
+
 Self-hosted scanning and automatic field suggestions are documented in [PRIVATE-DOCUMENT-AI.zh-TW.md](PRIVATE-DOCUMENT-AI.zh-TW.md). Prepare the private service before deploying this revision: new attachments require its clean scan, and are rejected when it is unavailable. The browser can preview locally extracted name, expiry date and notes before saving. No external AI API is used; confirmed attachments retain the existing private Cloudinary storage. Supported files are limited to common PDF, image, Office, TXT and CSV formats, with bounded OCR and parsing; uncertain dates require manual review.
 
 PDF/image/Office uploads are stored as Cloudinary **authenticated raw** assets with opaque names. The app never renders their origin URL. The `documents/<item-id>/download/` route checks login and ownership, fetches the signed source on the server, and responds as an attachment with `Cache-Control: private, no-store`. Local development uses private filesystem storage with no public `/media/` route.
@@ -123,4 +125,8 @@ python manage.py makemigrations --check --dry-run --settings=config.test_setting
 python -m pip check
 ```
 
-Tests use an isolated in-memory database, storage and email backend. They cover registration, login, reset tokens, item CRUD, ownership boundaries, file limits, optional/retained/cleared attachments, date buckets, and reminder behavior. No schema changes are needed for these fixes.
+Tests use an isolated in-memory database, storage and email backend. They cover registration, login, reset tokens, item CRUD, ownership boundaries, file limits, optional/retained/cleared attachments, date buckets, reminders and confirmed batch imports. Migration 0005 adds separate draft tables; existing expiry items remain unchanged.
+
+### Mobile website and PWA
+
+The responsive English interface supports phone login, expiry search/filtering, document upload and item updates while retaining desktop layouts. Users can add the existing site to their home screen with the same account and data. Only public assets and a generic offline screen are cached; private data and changes require an internet connection. See [MOBILE-PWA.md](MOBILE-PWA.md) for installation, privacy and deployment details.

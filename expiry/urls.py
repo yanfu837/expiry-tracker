@@ -1,10 +1,21 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
 
-from . import views
+from . import batch_imports, pwa, views
 from .scheduled_reminders import run_scheduled_reminders
 
 urlpatterns = [
+    path("manifest.webmanifest", pwa.manifest, name="pwa_manifest"),
+    path("service-worker.js", pwa.service_worker, name="pwa_service_worker"),
+    path("offline/", pwa.offline, name="pwa_offline"),
+    path("imports/", batch_imports.page, name="batch_import"),
+    path("imports/create/", batch_imports.create, name="batch_create"),
+    path("imports/<uuid:batch_id>/", batch_imports.page, name="batch_detail"),
+    path("imports/<uuid:batch_id>/status/", batch_imports.status, name="batch_status"),
+    path("imports/<uuid:batch_id>/<uuid:candidate_id>/analyze/", batch_imports.analyze, name="batch_analyze"),
+    path("imports/<uuid:batch_id>/<uuid:candidate_id>/save/", batch_imports.save, name="batch_save"),
+    path("imports/<uuid:batch_id>/<uuid:candidate_id>/skip/", batch_imports.skip, name="batch_skip"),
+    path("imports/<uuid:batch_id>/<uuid:candidate_id>/duplicate/", batch_imports.duplicate, name="batch_duplicate"),
     path("documents/analyze/", views.analyze_document, name="analyze_document"),
     path("internal/reminders/run/", run_scheduled_reminders, name="scheduled_reminders"),
     path("", views.dashboard, name="dashboard"),

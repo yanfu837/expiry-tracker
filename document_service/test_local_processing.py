@@ -118,6 +118,8 @@ class LocalFieldExtractionTests(unittest.TestCase):
         result = extract_fields("Expiry date: 2027/06/01\n到期日：2028/06/01")
         self.assertIsNone(result["expiry_date"])
         self.assertTrue(result["warnings"])
+        self.assertIn("2027/06/01", result["evidence"])
+        self.assertIn("2028/06/01", result["evidence"])
 
     def test_following_issue_date_does_not_change_a_clear_expiry(self):
         result = extract_fields("Expiry date: 2027/06/01\nIssue date: 2025/06/01")

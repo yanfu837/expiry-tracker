@@ -9,15 +9,17 @@ from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
+from django.db.models import Q
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST, require_safe
+from django.views.decorators.cache import never_cache
 from django.utils.text import slugify
 from django.views.decorators.cache import never_cache
 
 from .forms import AccountEmailForm, DocumentAnalysisForm, ExpiryItemForm, RegistrationForm
-from .document_processing import DocumentProcessingError, make_scan_token, process_upload, processor_configured
+from .document_processing import DocumentProcessingError, field_suggestions, make_scan_token, process_upload, processor_configured
 from .models import ExpiryItem
 from .storage import DocumentStorageError
 from .reminders import email_is_configured
@@ -35,9 +37,26 @@ def register(request):
 
 
 @login_required
+@never_cache
 def dashboard(request):
+    query = request.GET.get("q", "").strip()[:200]
+    window = request.GET.get("window", "all")
+    if window not in {"all", "expired", "30", "90", "later"}:
+        window = "all"
+    items = ExpiryItem.objects.filter(user=request.user)
+    if query:
+        items = items.filter(Q(name__icontains=query) | Q(notes__icontains=query))
+    today = timezone.localdate()
+    if window == "expired":
+        items = items.filter(expiry_date__lt=today)
+    elif window == "30":
+        items = items.filter(expiry_date__gte=today, expiry_date__lte=today+timedelta(days=30))
+    elif window == "90":
+        items = items.filter(expiry_date__gt=today+timedelta(days=30), expiry_date__lte=today+timedelta(days=90))
+    elif window == "later":
+        items = items.filter(expiry_date__gt=today+timedelta(days=90))
     groups = [[], [], [], []]
-    for item in ExpiryItem.objects.filter(user=request.user).order_by("expiry_date", "name", "pk"):
+    for item in items.order_by("expiry_date", "name", "pk"):
         days = item.days_remaining
         index = 0 if days < 0 else 1 if days <= 30 else 2 if days <= 90 else 3
         groups[index].append(item)
@@ -48,7 +67,8 @@ def dashboard(request):
         {"id": "later", "title": "Later", "items": groups[3], "empty": "No later items."},
     ]
     return render(request, "expiry/dashboard.html", {
-        "sections": sections,
+        "sections": sections, "query": query, "window": window,
+        "has_filters": bool(query or window != "all"), "total_items": sum(map(len, groups)),
         "expired_items": groups[0],
         "within_30_days": groups[1],
         "within_90_days": groups[2],
@@ -58,6 +78,7 @@ def dashboard(request):
 
 
 @login_required
+@never_cache
 def add_item(request):
     form = ExpiryItemForm(request.POST if request.method == "POST" else None, request.FILES or None, user=request.user)
     if request.method == "POST" and form.is_valid():
@@ -74,6 +95,7 @@ def add_item(request):
 
 
 @login_required
+@never_cache
 def edit_item(request, item_id):
     item = get_object_or_404(ExpiryItem, id=item_id, user=request.user)
     form = ExpiryItemForm(
@@ -99,35 +121,21 @@ def edit_item(request, item_id):
 def analyze_document(request):
     form = DocumentAnalysisForm(request.POST, request.FILES)
     if not form.is_valid():
-        return JsonResponse({"error": "invalid_file", "message": "請選擇支援的文件，大小限 10 MB。"}, status=400)
+        return JsonResponse({"error": "invalid_file", "message": "Choose a supported document, up to 10 MB."}, status=400)
     document = form.cleaned_data["document"]
     try:
         payload = process_upload(document, extract=True)
-        fields = payload.get("fields", {})
-        # Treat the private service's result as suggestions, never trusted HTML.
-        name = fields.get("name")
-        if not isinstance(name, str) or not name.strip():
-            name = PurePosixPath(document.name).stem
-        expiry_date = fields.get("expiry_date")
-        if expiry_date is not None:
-            from datetime import date
-            expiry_date = date.fromisoformat(expiry_date).isoformat()
-        notes = fields.get("notes", "")
-        warnings = fields.get("warnings", [])
-        if not isinstance(notes, str) or not isinstance(warnings, list) or not all(isinstance(w, str) for w in warnings):
-            raise ValueError()
-        result = {"name": name[:200], "expiry_date": expiry_date, "notes": notes[:10000],
-                  "warnings": [w[:400] for w in warnings[:5]], "evidence": str(fields.get("evidence", ""))[:600],
-                  "method": "本機 OCR 與欄位規則擷取"}
+        result = field_suggestions(payload, document.name)
         return JsonResponse({"fields": result, "scan_token": make_scan_token(document, request.user.pk)})
     except DocumentProcessingError as error:
         status = 422 if error.code in {"infected", "invalid_file"} else 503
         return JsonResponse({"error": error.code, "message": str(error)}, status=status)
     except (TypeError, ValueError, AttributeError):
-        return JsonResponse({"error": "unavailable", "message": "辨識結果無法使用，請稍後再試。"}, status=503)
+        return JsonResponse({"error": "unavailable", "message": "The extracted result could not be used. Please try again later."}, status=503)
 
 
 @login_required
+@never_cache
 def delete_item(request, item_id):
     item = get_object_or_404(ExpiryItem, id=item_id, user=request.user)
     if request.method == "POST":
@@ -162,6 +170,7 @@ def download_document(request, item_id):
 
 
 @login_required
+@never_cache
 def account_email(request):
     form = AccountEmailForm(request.POST if request.method == "POST" else None, instance=request.user)
     if request.method == "POST" and form.is_valid():

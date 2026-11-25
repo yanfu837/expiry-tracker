@@ -1,5 +1,7 @@
 # 自架掃毒、OCR 與資料自動帶入
 
+批次選檔、集中核對與確認後儲存的新增流程，請見 [BATCH-IMPORT.md](BATCH-IMPORT.md)：每檔 10 MB、每批 10 份、合計 50 MB，未確認草稿不會進入提醒清單。
+
 ## 本次範圍與目前狀態
 
 這一版依需求只準備可部署程式，**沒有建立付費主機、沒有部署正式網站，也沒有把客戶文件交給外部 AI API**。主機與費用之後決定。
@@ -106,4 +108,4 @@ docker run --rm --network none expiry-document-processor python -m unittest docu
 
 容器整合驗證會使用真正的 ClamAV 引擎、專用 EICAR 測試簽章與本機 Tesseract／Poppler，確認測試字串被阻擋、圖片與掃描 PDF 可辨識及暫存檔清除。這不等於已在正式主機驗證完整官方病毒碼；部署時仍需完成官方病毒碼下載，再用 EICAR 與自有非敏感文件驗證。
 
-目前不需要新增資料庫 migration，也不修改到期提醒與忘記密碼的寄信設定。
+批次流程新增 migration `0005_documentimportbatch_documentimportcandidate`，加入獨立草稿表；既有到期項目與寄信帳密設定不變。每日排程的非預覽執行會額外清理過期匯入草稿。

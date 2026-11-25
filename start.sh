@@ -6,4 +6,5 @@ set -euo pipefail
 python manage.py migrate --noinput
 python manage.py secure_existing_documents
 python manage.py cleanup_documents --limit 50
-exec gunicorn config.wsgi:application --bind "0.0.0.0:${PORT:-8000}" --access-logfile - --error-logfile -
+python manage.py cleanup_import_batches --limit 100
+exec gunicorn config.wsgi:application --bind "0.0.0.0:${PORT:-8000}" --worker-class gthread --threads 4 --timeout 130 --access-logfile - --error-logfile -

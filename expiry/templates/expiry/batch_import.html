@@ -1,0 +1,53 @@
+{% extends 'expiry/base.html' %}
+{% load static %}
+{% block title %}Import expiry items{% endblock %}
+{% block container_class %}container batch-container{% endblock %}
+{% block content %}
+<section id="batch-import" data-create-url="{% url 'batch_create' %}" data-max-files="{{ max_files }}" data-max-total-bytes="{{ max_total_bytes }}" data-available="{{ processor_available|yesno:'true,false' }}">
+    <h1>Import expiry items</h1>
+    <p class="intro">Select up to {{ max_files }} documents. We scan and extract each file, then you review the results. Each row is one expiry item; unconfirmed drafts never receive reminders.</p>
+    {% if not processor_available %}<p class="message error">Private scanning and extraction are not enabled yet. New documents cannot be processed.</p>{% endif %}
+    <div class="panel">
+        {% csrf_token %}
+        <label for="batch-files"><strong>1. Choose documents</strong></label>
+        <input id="batch-files" type="file" multiple accept="{{ accepted_types }}" {% if not processor_available %}disabled{% endif %}>
+        <p class="helptext">Up to 10 MB per file, {{ max_files }} files and 50 MB per batch. PDF extraction covers only the first 10 pages; check later pages yourself. Documents are processed on the private server. Unsaved edits and selections stay in this page; after refreshing, reselect the original files and review again.</p>
+        <p><a href="{% url 'add_item' %}">Create an item without a document</a></p>
+        <p id="batch-message" role="status" aria-live="polite"></p>
+    </div>
+    <h2>2. Review each expiry item</h2>
+    <p>Check the filename, item name, expiry date and original date text. Missing or conflicting dates stay blank. Enter the correct date yourself. Editing a field clears its confirmation.</p>
+    <p class="helptext">One document can contain several expiry items. Use “Add another item” to enter and confirm each one. Save confirmed items together; retry or skip individual failures.</p>
+    <div class="batch-table-wrap" tabindex="0" aria-label="Expiry item review table">
+        <table class="batch-table">
+            <caption class="visually-hidden">Review each expiry item. Only confirmed and saved rows enter your expiry list.</caption>
+            <thead><tr><th scope="col">File and progress</th><th scope="col">Item name / notes</th><th scope="col">Expiry date</th><th scope="col">Original date text</th><th scope="col">Confirmation</th><th scope="col">Actions</th></tr></thead>
+            <tbody id="batch-rows"></tbody>
+        </table>
+    </div>
+    <div class="actions batch-save-actions">
+        <button id="save-confirmed" type="button" disabled>Save confirmed items (0)</button>
+        <button id="refresh-batch" type="button" class="secondary" disabled>Check status</button>
+        <a href="{% url 'batch_import' %}">Start another batch</a>
+        <a href="{% url 'dashboard' %}">Back to expiry list</a>
+    </div>
+    <p id="batch-summary" role="status" aria-live="polite">No files selected.</p>
+    <p class="helptext">Drafts expire after 24 hours. Saved items are kept independently. Retrying a row checks its saved record and does not create the same item again.</p>
+</section>
+<template id="candidate-row-template">
+    <tr>
+        <td data-label="File and progress"><strong class="source-filename"></strong><p class="row-status" role="status"></p><p class="row-message helptext"></p></td>
+        <td data-label="Item name / notes"><label class="visually-hidden name-label">Item name</label><input class="candidate-name" maxlength="200" required>
+            <details><summary>Notes</summary><label class="visually-hidden notes-label">Notes</label><textarea class="candidate-notes" maxlength="10000" rows="3"></textarea></details></td>
+        <td data-label="Expiry date"><label class="visually-hidden date-label">Expiry date</label><input class="candidate-date" type="date" required></td>
+        <td data-label="Original date text"><blockquote class="date-evidence"></blockquote><ul class="candidate-warnings"></ul></td>
+        <td data-label="Confirmation"><label><input class="candidate-confirm" type="checkbox" disabled> I have checked this expiry item</label></td>
+        <td data-label="Actions"><div class="batch-row-actions"><button type="button" class="retry-candidate secondary">Retry extraction</button>
+            <button type="button" class="reselect-candidate secondary">Reselect file</button><input class="reselect-file" type="file" accept="{{ accepted_types }}" hidden>
+            <button type="button" class="skip-candidate secondary">Skip</button><button type="button" class="duplicate-candidate secondary">Add another item</button>
+            <a class="saved-item" hidden>View saved item</a></div></td>
+    </tr>
+</template>
+{{ initial_batch|json_script:"initial-import-batch" }}
+<script src="{% static 'expiry/batch-import.js' %}" defer></script>
+{% endblock %}

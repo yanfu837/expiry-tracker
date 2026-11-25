@@ -13,6 +13,7 @@ from django.urls import reverse
 
 from .forms import ExpiryItemForm
 from .models import ExpiryItem
+from .test_helpers import CleanScanTestCase
 
 PASSWORD = "River-Business-9382!"
 
@@ -85,8 +86,9 @@ class AuthTests(TestCase):
         self.assertEqual(len(mail.outbox), 0)
 
 
-class ExpiryItemTests(TestCase):
+class ExpiryItemTests(CleanScanTestCase):
     def setUp(self):
+        super().setUp()
         self.owner = User.objects.create_user("owner", password=PASSWORD)
         self.other = User.objects.create_user("other", password=PASSWORD)
         self.client.force_login(self.owner)

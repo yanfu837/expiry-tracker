@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .reminders import email_is_configured, reminder_preview, send_reminders
+from .import_cleanup import cleanup_import_batches
 
 ISSUER = "https://token.actions.githubusercontent.com"
 # Fetch only GitHub's fixed HTTPS key endpoint. Unknown key IDs are rejected
@@ -79,6 +80,7 @@ def run_scheduled_reminders(request):
         return JsonResponse({"error": "invalid_request"}, status=400)
     if options.get("dry_run", False):
         return JsonResponse({"dry_run": True, **reminder_preview()})
+    cleanup_import_batches(limit=100)
     if not email_is_configured():
         return JsonResponse({"error": "email_not_configured"}, status=503)
     # The caller can trigger existing reminders, but cannot choose a recipient,

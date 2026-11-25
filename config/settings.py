@@ -106,6 +106,19 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
+FILE_UPLOAD_HANDLERS = [
+    "expiry.upload_limits.BoundedUploadHandler",
+    "django.core.files.uploadhandler.MemoryFileUploadHandler",
+    "django.core.files.uploadhandler.TemporaryFileUploadHandler",
+]
+# A private service owned by this deployment; no public AI or scan APIs.
+DOCUMENT_PROCESSOR_URL = os.getenv("DOCUMENT_PROCESSOR_URL", "")
+DOCUMENT_PROCESSOR_TOKEN = os.getenv("DOCUMENT_PROCESSOR_TOKEN", "")
+DOCUMENT_SCAN_RECEIPT_TTL = 15 * 60
+DOCUMENT_BATCH_MAX_FILES = max(1, min(50, int(os.getenv("DOCUMENT_BATCH_MAX_FILES", "10"))))
+DOCUMENT_BATCH_MAX_CANDIDATES = DOCUMENT_BATCH_MAX_FILES * 5
+DOCUMENT_BATCH_MAX_TOTAL_BYTES = 50 * 1024 * 1024
 
 email_backend = os.getenv(
     "EMAIL_BACKEND",

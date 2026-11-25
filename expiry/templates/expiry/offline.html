@@ -1,0 +1,23 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#075b76">
+    <title>You are offline | Expiry Tracker</title>
+    <link rel="stylesheet" href="{% static 'expiry/styles.css' %}">
+    <link rel="icon" href="{% static 'expiry/icons/icon-192.png' %}" type="image/png">
+</head>
+<body>
+    <main class="container">
+        <section class="panel form-panel">
+            <p class="eyebrow">Expiry Tracker</p>
+            <h1>You are offline</h1>
+            <p>Connect to the internet to log in, view expiry dates, upload documents or save changes.</p>
+            <p>Your private items and documents are not stored for offline access. Nothing is uploaded or saved while you are offline.</p>
+            <a class="button" href="/">Try again</a>
+        </section>
+    </main>
+</body>
+</html>

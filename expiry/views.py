@@ -9,13 +9,17 @@ from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
-from django.http import FileResponse, Http404, HttpResponse
+from django.db.models import Q
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST, require_safe
+from django.views.decorators.cache import never_cache
 from django.utils.text import slugify
+from django.views.decorators.cache import never_cache
 
-from .forms import AccountEmailForm, ExpiryItemForm, RegistrationForm
+from .forms import AccountEmailForm, DocumentAnalysisForm, ExpiryItemForm, RegistrationForm
+from .document_processing import DocumentProcessingError, field_suggestions, make_scan_token, process_upload, processor_configured
 from .models import ExpiryItem
 from .storage import DocumentStorageError
 from .reminders import email_is_configured
@@ -33,9 +37,26 @@ def register(request):
 
 
 @login_required
+@never_cache
 def dashboard(request):
+    query = request.GET.get("q", "").strip()[:200]
+    window = request.GET.get("window", "all")
+    if window not in {"all", "expired", "30", "90", "later"}:
+        window = "all"
+    items = ExpiryItem.objects.filter(user=request.user)
+    if query:
+        items = items.filter(Q(name__icontains=query) | Q(notes__icontains=query))
+    today = timezone.localdate()
+    if window == "expired":
+        items = items.filter(expiry_date__lt=today)
+    elif window == "30":
+        items = items.filter(expiry_date__gte=today, expiry_date__lte=today+timedelta(days=30))
+    elif window == "90":
+        items = items.filter(expiry_date__gt=today+timedelta(days=30), expiry_date__lte=today+timedelta(days=90))
+    elif window == "later":
+        items = items.filter(expiry_date__gt=today+timedelta(days=90))
     groups = [[], [], [], []]
-    for item in ExpiryItem.objects.filter(user=request.user).order_by("expiry_date", "name", "pk"):
+    for item in items.order_by("expiry_date", "name", "pk"):
         days = item.days_remaining
         index = 0 if days < 0 else 1 if days <= 30 else 2 if days <= 90 else 3
         groups[index].append(item)
@@ -46,7 +67,8 @@ def dashboard(request):
         {"id": "later", "title": "Later", "items": groups[3], "empty": "No later items."},
     ]
     return render(request, "expiry/dashboard.html", {
-        "sections": sections,
+        "sections": sections, "query": query, "window": window,
+        "has_filters": bool(query or window != "all"), "total_items": sum(map(len, groups)),
         "expired_items": groups[0],
         "within_30_days": groups[1],
         "within_90_days": groups[2],
@@ -56,41 +78,64 @@ def dashboard(request):
 
 
 @login_required
+@never_cache
 def add_item(request):
-    form = ExpiryItemForm(request.POST if request.method == "POST" else None, request.FILES or None)
+    form = ExpiryItemForm(request.POST if request.method == "POST" else None, request.FILES or None, user=request.user)
     if request.method == "POST" and form.is_valid():
         item = form.save(commit=False)
         item.user = request.user
         try:
             item.save()
-        except DocumentStorageError:
-            form.add_error("document", "The document could not be saved. Please try again later.")
+        except (DocumentStorageError, DocumentProcessingError):
+            form.add_error("document", "The document could not be safely saved. Please try again later.")
         else:
             messages.success(request, "Expiry item added.")
             return redirect("dashboard")
-    return render(request, "expiry/add_item.html", {"form": form})
+    return render(request, "expiry/add_item.html", {"form": form, "processor_available": processor_configured()})
 
 
 @login_required
+@never_cache
 def edit_item(request, item_id):
     item = get_object_or_404(ExpiryItem, id=item_id, user=request.user)
     form = ExpiryItemForm(
         request.POST if request.method == "POST" else None,
         request.FILES or None,
         instance=item,
+        user=request.user,
     )
     if request.method == "POST" and form.is_valid():
         try:
             form.save()
-        except DocumentStorageError:
-            form.add_error("document", "The document could not be saved. Please try again later.")
+        except (DocumentStorageError, DocumentProcessingError):
+            form.add_error("document", "The document could not be safely saved. Please try again later.")
         else:
             messages.success(request, "Expiry item updated.")
             return redirect("dashboard")
-    return render(request, "expiry/edit_item.html", {"form": form, "item": item})
+    return render(request, "expiry/edit_item.html", {"form": form, "item": item, "processor_available": processor_configured()})
 
 
 @login_required
+@never_cache
+@require_POST
+def analyze_document(request):
+    form = DocumentAnalysisForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return JsonResponse({"error": "invalid_file", "message": "Choose a supported document, up to 10 MB."}, status=400)
+    document = form.cleaned_data["document"]
+    try:
+        payload = process_upload(document, extract=True)
+        result = field_suggestions(payload, document.name)
+        return JsonResponse({"fields": result, "scan_token": make_scan_token(document, request.user.pk)})
+    except DocumentProcessingError as error:
+        status = 422 if error.code in {"infected", "invalid_file"} else 503
+        return JsonResponse({"error": error.code, "message": str(error)}, status=status)
+    except (TypeError, ValueError, AttributeError):
+        return JsonResponse({"error": "unavailable", "message": "The extracted result could not be used. Please try again later."}, status=503)
+
+
+@login_required
+@never_cache
 def delete_item(request, item_id):
     item = get_object_or_404(ExpiryItem, id=item_id, user=request.user)
     if request.method == "POST":
@@ -125,6 +170,7 @@ def download_document(request, item_id):
 
 
 @login_required
+@never_cache
 def account_email(request):
     form = AccountEmailForm(request.POST if request.method == "POST" else None, instance=request.user)
     if request.method == "POST" and form.is_valid():

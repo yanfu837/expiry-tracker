@@ -13,10 +13,12 @@ from django.utils import timezone
 
 from .models import DocumentDeletion, ExpiryItem
 from .storage import DocumentStorageError, PRIVATE_PREFIX, PrivateCloudinaryStorage
+from .test_helpers import CleanScanTestCase
 
 
-class DocumentPrivacyTests(TestCase):
+class DocumentPrivacyTests(CleanScanTestCase):
     def setUp(self):
+        super().setUp()
         self.owner = User.objects.create_user("private_owner", password="Private-Password-892!")
         self.other = User.objects.create_user("private_other", password="Private-Password-392!")
         self.client.force_login(self.owner)
@@ -122,7 +124,7 @@ class DocumentPrivacyTests(TestCase):
 
 
 @override_settings(CLOUDINARY_STORAGE={"CLOUD_NAME":"test-cloud", "API_KEY":"test-key", "API_SECRET":"test-secret"})
-class PrivateCloudinaryTests(TestCase):
+class PrivateCloudinaryTests(CleanScanTestCase):
     def test_new_uploads_use_authenticated_delivery_and_opaque_names(self):
         storage = PrivateCloudinaryStorage()
         with patch("expiry.storage.cloudinary.uploader.upload", side_effect=lambda content, **kwargs:{"public_id":kwargs["public_id"], "type":"authenticated"}) as upload:

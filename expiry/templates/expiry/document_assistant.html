@@ -1,0 +1,16 @@
+{% load static %}
+<aside class="document-assistant" data-analyze-url="{% url 'analyze_document' %}" data-available="{{ processor_available|yesno:'true,false' }}" aria-label="Document scanning and extraction">
+    <h2>Scan and extract document details</h2>
+    {% if processor_available %}
+        <p>Choose a document to scan it for malware and extract its name, expiry date and notes on the private server. Review the suggestions before saving.</p>
+        <p class="helptext">No external AI service is used. Supported: PDF, images, Word, Excel, TXT and CSV, up to 10 MB. PDFs are processed only through the first 10 pages. Your manual edits are kept.</p>
+        <button type="button" class="secondary" id="analyze-document" disabled>Retry extraction</button>
+    {% else %}
+        <p>Private scanning and extraction are not enabled. New attachments cannot be saved yet. You can create an item without a document or keep its existing attachment.</p>
+    {% endif %}
+    <p id="document-status" role="status" aria-live="polite"></p>
+    <p id="document-evidence" class="helptext"></p>
+    <ul id="document-warnings"></ul>
+    {% if form.is_bound and form.errors %}<p>Reselect any new file after correcting the form. Documents from an invalid submission are not saved.</p>{% endif %}
+</aside>
+<script src="{% static 'expiry/document-assistant.js' %}" defer></script>

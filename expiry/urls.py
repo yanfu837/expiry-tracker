@@ -1,10 +1,13 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
 
-from . import views
+from . import pwa, views
 from .scheduled_reminders import run_scheduled_reminders
 
 urlpatterns = [
+    path("manifest.webmanifest", pwa.manifest, name="pwa_manifest"),
+    path("service-worker.js", pwa.service_worker, name="pwa_service_worker"),
+    path("offline/", pwa.offline, name="pwa_offline"),
     path("internal/reminders/run/", run_scheduled_reminders, name="scheduled_reminders"),
     path("", views.dashboard, name="dashboard"),
     path("add/", views.add_item, name="add_item"),

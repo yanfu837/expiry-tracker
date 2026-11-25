@@ -9,10 +9,12 @@ from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
+from django.db.models import Q
 from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST, require_safe
+from django.views.decorators.cache import never_cache
 from django.utils.text import slugify
 
 from .forms import AccountEmailForm, ExpiryItemForm, RegistrationForm
@@ -33,9 +35,26 @@ def register(request):
 
 
 @login_required
+@never_cache
 def dashboard(request):
+    query = request.GET.get("q", "").strip()[:200]
+    window = request.GET.get("window", "all")
+    if window not in {"all", "expired", "30", "90", "later"}:
+        window = "all"
+    items = ExpiryItem.objects.filter(user=request.user)
+    if query:
+        items = items.filter(Q(name__icontains=query) | Q(notes__icontains=query))
+    today = timezone.localdate()
+    if window == "expired":
+        items = items.filter(expiry_date__lt=today)
+    elif window == "30":
+        items = items.filter(expiry_date__gte=today, expiry_date__lte=today+timedelta(days=30))
+    elif window == "90":
+        items = items.filter(expiry_date__gt=today+timedelta(days=30), expiry_date__lte=today+timedelta(days=90))
+    elif window == "later":
+        items = items.filter(expiry_date__gt=today+timedelta(days=90))
     groups = [[], [], [], []]
-    for item in ExpiryItem.objects.filter(user=request.user).order_by("expiry_date", "name", "pk"):
+    for item in items.order_by("expiry_date", "name", "pk"):
         days = item.days_remaining
         index = 0 if days < 0 else 1 if days <= 30 else 2 if days <= 90 else 3
         groups[index].append(item)
@@ -46,7 +65,8 @@ def dashboard(request):
         {"id": "later", "title": "Later", "items": groups[3], "empty": "No later items."},
     ]
     return render(request, "expiry/dashboard.html", {
-        "sections": sections,
+        "sections": sections, "query": query, "window": window,
+        "has_filters": bool(query or window != "all"), "total_items": sum(map(len, groups)),
         "expired_items": groups[0],
         "within_30_days": groups[1],
         "within_90_days": groups[2],
@@ -56,6 +76,7 @@ def dashboard(request):
 
 
 @login_required
+@never_cache
 def add_item(request):
     form = ExpiryItemForm(request.POST if request.method == "POST" else None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
@@ -72,6 +93,7 @@ def add_item(request):
 
 
 @login_required
+@never_cache
 def edit_item(request, item_id):
     item = get_object_or_404(ExpiryItem, id=item_id, user=request.user)
     form = ExpiryItemForm(
@@ -91,6 +113,7 @@ def edit_item(request, item_id):
 
 
 @login_required
+@never_cache
 def delete_item(request, item_id):
     item = get_object_or_404(ExpiryItem, id=item_id, user=request.user)
     if request.method == "POST":
@@ -125,6 +148,7 @@ def download_document(request, item_id):
 
 
 @login_required
+@never_cache
 def account_email(request):
     form = AccountEmailForm(request.POST if request.method == "POST" else None, instance=request.user)
     if request.method == "POST" and form.is_valid():

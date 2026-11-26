@@ -32,6 +32,10 @@ class AccountEmailForm(forms.ModelForm):
 
 
 class ExpiryItemForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["document"].widget.attrs["accept"] = ".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+
     class Meta:
         model = ExpiryItem
         fields = ["name", "expiry_date", "notes", "document"]

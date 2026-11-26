@@ -3,19 +3,26 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="description" content="Track business licenses, insurance, contracts and important expiry dates.">
+    <meta name="theme-color" content="#075b76">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Expiry Tracker">
+    <link rel="manifest" href="{% url 'pwa_manifest' %}">
+    <link rel="apple-touch-icon" href="{% static 'expiry/icons/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" href="{% static 'expiry/icons/icon-192.png' %}">
     <title>{% block title %}Expiry Tracker{% endblock %} | Expiry Tracker</title>
     <link rel="stylesheet" href="{% static 'expiry/styles.css' %}">
 </head>
-<body>
+<body{% if user.is_authenticated %} class="has-mobile-navigation"{% endif %}>
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
         <a class="brand" href="{% url 'dashboard' %}">Expiry Tracker</a>
         <nav aria-label="Account">
             {% if user.is_authenticated %}
                 <span class="username">{{ user.username }}</span>
-                <a href="{% url 'account_email' %}">Email settings</a>
+                <a class="account-settings" href="{% url 'account_email' %}">Email settings</a>
                 <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
                     <button class="button secondary" type="submit">Log out</button>
@@ -26,7 +33,8 @@
             {% endif %}
         </nav>
     </header>
-    <main class="container" id="main">
+    <main class="{% block container_class %}container{% endblock %}" id="main">
+        <p id="offline-notice" class="message" role="status" hidden>You are offline. Reconnect before uploading documents or saving changes.</p>
         {% if messages %}
             <ul class="messages" aria-label="Notifications">
                 {% for message in messages %}
@@ -35,7 +43,17 @@
             </ul>
         {% endif %}
         {% block content %}{% endblock %}
+        {% include 'expiry/install.html' %}
     </main>
+    {% if user.is_authenticated %}
+    <nav class="mobile-navigation" aria-label="Main navigation">
+        <a href="{% url 'dashboard' %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>Items</a>
+        <a href="{% url 'add_item' %}" {% if request.resolver_match.url_name == 'add_item' %}aria-current="page"{% endif %}>+ Add item</a>
+        <a href="{% url 'account_email' %}" {% if request.resolver_match.url_name == 'account_email' %}aria-current="page"{% endif %}>Email settings</a>
+    </nav>
+    {% endif %}
+    <script src="{% static 'expiry/pwa.js' %}" defer></script>
+    <script src="{% static 'expiry/file-validation.js' %}" defer></script>
     <footer>Expiry Tracker · Keep important dates in view. · <a href="{% url 'privacy' %}">Privacy &amp; data</a></footer>
 </body>
 </html>

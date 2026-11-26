@@ -122,3 +122,7 @@ python -m pip check
 ```
 
 Tests use an isolated in-memory database, storage and email backend. They cover registration, login, reset tokens, item CRUD, ownership boundaries, file limits, optional/retained/cleared attachments, date buckets, and reminder behavior. No schema changes are needed for these fixes.
+
+### Mobile website and PWA
+
+The responsive English interface supports phone login, expiry search/filtering, document upload and item updates while retaining desktop layouts. Users can add the existing site to their home screen with the same account and data. Only public assets and a generic offline screen are cached; private data and changes require an internet connection. See [MOBILE-PWA.md](MOBILE-PWA.md) for installation, privacy and deployment details.

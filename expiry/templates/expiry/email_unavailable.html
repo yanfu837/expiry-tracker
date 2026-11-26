@@ -2,8 +2,8 @@
 {% block title %}Email unavailable{% endblock %}
 {% block content %}
 <section class="panel form-panel">
-    <h1>Password reset email is not available yet</h1>
-    <p>Please contact the site administrator for help with your account.</p>
+    <h1>Password reset email is temporarily unavailable</h1>
+    <p>Please try again later, or {% include 'expiry/support_link.html' %} for help with your account.</p>
     <a href="{% url 'login' %}">Back to log in</a>
 </section>
 {% endblock %}

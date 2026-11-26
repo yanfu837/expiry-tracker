@@ -55,6 +55,6 @@
     {% endif %}
     <script src="{% static 'expiry/pwa.js' %}" defer></script>
     <script src="{% static 'expiry/file-validation.js' %}" defer></script>
-    <footer>Expiry Tracker · Keep important dates in view. · <a href="{% url 'privacy' %}">Privacy &amp; data</a></footer>
+    <footer>Expiry Tracker · Keep important dates in view. · <a href="{% url 'privacy' %}">Privacy &amp; data</a>{% if support_email %} · {% include 'expiry/support_link.html' %}{% endif %}</footer>
 </body>
 </html>

@@ -4,7 +4,8 @@ import os
 from pathlib import Path
 
 import dj_database_url
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.core.validators import validate_email
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -73,6 +74,7 @@ TEMPLATES = [{
             "django.template.context_processors.request",
             "django.contrib.auth.context_processors.auth",
             "django.contrib.messages.context_processors.messages",
+            "expiry.context_processors.account_support",
         ],
     },
 }]
@@ -123,6 +125,14 @@ if email_backend == "django.core.mail.backends.smtp.EmailBackend":
         "timeout": 15,
     }
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL") or os.getenv("EMAIL_HOST_USER") or "webmaster@localhost"
+SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "").strip()
+if SUPPORT_EMAIL:
+    try:
+        validate_email(SUPPORT_EMAIL)
+    except ValidationError as error:
+        raise ImproperlyConfigured("SUPPORT_EMAIL must be a valid email address.") from error
+PASSWORD_RESET_TIMEOUT = 60 * 60
+
 # GitHub Actions can only trigger reminders after these non-secret trust settings
 # are explicitly configured. SMTP and database credentials stay on Render.
 REMINDER_OIDC_AUDIENCE = os.getenv("REMINDER_OIDC_AUDIENCE", "")

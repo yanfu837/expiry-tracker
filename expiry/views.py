@@ -4,6 +4,7 @@ import mimetypes
 from datetime import timedelta
 from smtplib import SMTPException
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
@@ -202,3 +203,12 @@ class ConfiguredPasswordResetView(auth_views.PasswordResetView):
 
 def privacy(request):
     return render(request, "expiry/privacy.html")
+
+
+@never_cache
+@require_safe
+def contractors(request):
+    return render(request, "expiry/contractors.html", {
+        "email_available": email_is_configured(),
+        "documents_available": settings.DOCUMENT_UPLOADS_ENABLED,
+    })

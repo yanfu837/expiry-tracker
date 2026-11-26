@@ -97,4 +97,4 @@ Start Command: bash start.sh
 
 本機另外重現了「未執行 migration → 註冊 500；執行後成功」，因此補上自動 migration 以避免後續部署問題。已提供的線上 Traceback 則確認本次線上 500 發生在 PostgreSQL 主機名稱解析，需先依前述步驟修復連線。
 
-自動測試不連線正式 PostgreSQL、Cloudinary 或 SMTP，也不會修改正式資料。自動提醒的每日排程尚未建立；如需啟用，參考 README 的排程指令。
+自動測試不連線正式 PostgreSQL、Cloudinary 或 SMTP，也不會修改正式資料。GitHub Actions 每日排程已建立；實際寄信仍需完成 SMTP 設定，請參考 [EMAIL-SCHEDULE.zh-TW.md](EMAIL-SCHEDULE.zh-TW.md)。

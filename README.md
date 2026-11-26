@@ -6,6 +6,12 @@ A Django 6.1 application for tracking licenses, insurance, contracts and documen
 
 `/contractors/` is an English introduction for small HVAC, plumbing and electrical contractors already tracking multiple technician certifications and company insurance policies in Excel. It uses fictional examples, explains manual entry from a spreadsheet and links to the existing registration and login routes. Email and upload availability follow the site's current configuration. The page does not change registration eligibility or expose customer records. It can deploy independently of the pending mobile/PWA and private-scanning changes.
 
+## Operational status — 2026-11-26
+
+The existing `expiry-tracker-db` was upgraded in place to the paid `0.1c-256mb` Postgres plan with 1 GB storage. Its database identity and network restrictions were preserved, storage autoscaling remains disabled, and the former December 8 free-plan expiry has been removed. Published database pricing is US$6/month for compute plus US$0.30/month for 1 GB storage (about US$6.30/month for this database).
+
+The daily GitHub Actions schedule exists, but SMTP delivery is still disabled. Configure the sender privately in Render and verify receipt in a controlled inbox test before promising working reminder emails. Website and database-backed registration validation passed after the upgrade; the database change does not enable email.
+
 ## Local development
 
 Use Python 3.12 or newer. Keep your existing `.env`, database and uploaded documents when applying updates.

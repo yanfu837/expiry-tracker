@@ -2,6 +2,10 @@
 
 A Django 6.1 application for tracking licenses, insurance, contracts and document expiry dates.
 
+## Public contractor introduction
+
+`/contractors/` is an English introduction for small HVAC, plumbing and electrical contractors already tracking multiple technician certifications and company insurance policies in Excel. It uses fictional examples, explains manual entry from a spreadsheet and links to the existing registration and login routes. Email and upload availability follow the site's current configuration. The page does not change registration eligibility or expose customer records. It can deploy independently of the pending mobile/PWA and private-scanning changes.
+
 ## Local development
 
 Use Python 3.12 or newer. Keep your existing `.env`, database and uploaded documents when applying updates.

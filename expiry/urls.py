@@ -32,5 +32,6 @@ urlpatterns = [
         template_name="expiry/password_reset_complete.html",
     ), name="password_reset_complete"),
     path("test-email/", views.test_email, name="test_email"),
+    path("contractors/", views.contractors, name="contractors"),
     path("privacy/", views.privacy, name="privacy"),
 ]

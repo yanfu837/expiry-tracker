@@ -1,0 +1,79 @@
+{% extends 'expiry/base.html' %}
+{% load static %}
+{% block title %}Certification and insurance expiry tracking for contractors{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'expiry/contractors.css' %}">{% endblock %}
+{% block content %}
+<div class="contractor-page">
+    <section class="contractor-hero" aria-labelledby="contractor-heading">
+        <div class="contractor-hero-copy">
+            <p class="contractor-eyebrow">For small contractors using Excel</p>
+            <div class="contractor-trades" aria-label="Trades"><span>HVAC</span><span>Plumbing</span><span>Electrical</span></div>
+            <h1 id="contractor-heading">Know which certification or policy expires next.</h1>
+            <p class="contractor-lead">You already track your technicians’ certifications and company insurance in a spreadsheet. Give those renewal dates a clear, easy-to-check home.</p>
+            <div class="actions contractor-cta">
+                {% if user.is_authenticated %}
+                    <a class="button" href="{% url 'dashboard' %}">Open your expiry list <span aria-hidden="true">→</span></a>
+                {% else %}
+                    <a class="button" href="{% url 'register' %}">Create your account <span aria-hidden="true">→</span></a>
+                    <a class="contractor-text-link" href="{% url 'login' %}">Already have an account? Log in</a>
+                {% endif %}
+            </div>
+            <p class="contractor-small">One account. Your dates and documents. Phone or desktop browser.</p>
+        </div>
+        <div class="contractor-preview" aria-label="Example expiry list">
+            <div class="contractor-preview-heading"><span class="contractor-preview-icon" aria-hidden="true">ET</span><div><strong>Your next renewals</strong><span>Illustrative examples</span></div></div>
+            <div class="contractor-example contractor-example-soon">
+                <span class="contractor-example-type">Company insurance</span>
+                <h2>General liability policy</h2>
+                <div class="contractor-example-meta"><span class="contractor-date-state">18 days remaining</span><span>Within 30 days</span></div>
+            </div>
+            <div class="contractor-example contractor-example-later">
+                <span class="contractor-example-type">Technician certification</span>
+                <h2>Technician A — HVAC certification</h2>
+                <div class="contractor-example-meta"><span class="contractor-date-state">46 days remaining</span><span>31–90 days</span></div>
+            </div>
+            <div class="contractor-example contractor-example-expired">
+                <span class="contractor-example-type">Technician license</span>
+                <h2>Technician B — trade license</h2>
+                <div class="contractor-example-meta"><span class="contractor-date-state">Expired 3 days ago</span><span>Expired</span></div>
+            </div>
+            <p class="contractor-preview-note">A separate expiry item for each certification or policy.</p>
+        </div>
+    </section>
+
+    <section class="contractor-section" aria-labelledby="contractor-fit-heading">
+        <p class="contractor-eyebrow">A familiar problem</p>
+        <h2 id="contractor-fit-heading">More renewals than you want to keep in your head.</h2>
+        <p class="contractor-section-intro">For the owner or office administrator keeping several technicians’ credentials and business policies up to date.</p>
+        <div class="contractor-benefits">
+            <article><span class="contractor-step-number" aria-hidden="true">01</span><h3>See what needs attention</h3><p>View expired items, dates within 30 days, dates in 31–90 days and later renewals in separate groups.</p></article>
+            <article><span class="contractor-step-number" aria-hidden="true">02</span><h3>Keep the right record together</h3><p>Name each item for its technician or policy. Add the expiry date and notes so you can recognise it next time.</p></article>
+            <article><span class="contractor-step-number" aria-hidden="true">03</span><h3>Find the supporting document</h3><p>{% if documents_available %}Attach a supported document to its expiry item, up to 10 MB. Open or update it when the renewal changes.{% else %}Start by saving dates and notes. Document uploads are currently unavailable on this site.{% endif %}</p></article>
+        </div>
+    </section>
+
+    <section class="contractor-workflow contractor-section" aria-labelledby="contractor-start-heading">
+        <div><p class="contractor-eyebrow">Start with your existing spreadsheet</p><h2 id="contractor-start-heading">Bring over one renewal at a time.</h2><p>You can start with the dates coming up soon. Keep your Excel copy while you check the entries.</p><a class="contractor-text-link" href="{% url 'add_item' %}">Add your first expiry item <span aria-hidden="true">→</span></a></div>
+        <ol>
+            <li><strong>Choose one certification or policy.</strong><span>Copy its name and expiry date from your spreadsheet into a new item.</span></li>
+            <li><strong>Check the details.</strong><span>Add notes and, when uploads are available, an optional document. Confirm the date before saving.</span></li>
+            <li><strong>Keep the record current.</strong><span>Review the expiry list and update the date and document after renewal.</span></li>
+        </ol>
+    </section>
+
+    <section class="contractor-section contractor-faq" aria-labelledby="contractor-questions-heading">
+        <p class="contractor-eyebrow">Before you get started</p>
+        <h2 id="contractor-questions-heading">A few useful details.</h2>
+        <details><summary>Is this for a small HVAC, plumbing or electrical business?</summary><p>Yes. This workflow is designed for a small contractor tracking multiple technician certifications and company insurance policies. Each renewal is an individual expiry item in your account.</p></details>
+        <details><summary>Can I start with the list I already keep in Excel?</summary><p>Yes. Add items one at a time by copying the names and dates from your sheet. This page describes manual entry; it does not offer automatic spreadsheet import.</p></details>
+        <details><summary>Are my records visible on this public page?</summary><p>This page uses fictional examples. Your saved items are available only through your account, and document downloads require login and ownership. Read <a href="{% url 'privacy' %}">how your data is handled</a>.</p></details>
+        <details><summary>Will I receive reminder emails?</summary><p>{% if email_available %}Email delivery uses the address saved on your account. Automatic reminders also depend on the site’s reminder schedule being configured.{% else %}Email reminders are not enabled on this site yet. You can manage your dates and review upcoming renewals in the expiry list.{% endif %}</p></details>
+        <details><summary>Can I check and update items from my phone?</summary><p>Use your phone’s browser to log in to the same account, check dates and update items. An internet connection is required.</p></details>
+    </section>
+
+    <section class="contractor-closing" aria-labelledby="contractor-closing-heading">
+        <div><p class="contractor-eyebrow">Keep the next renewal in view</p><h2 id="contractor-closing-heading">Start with one date you don’t want to miss.</h2></div>
+        {% if user.is_authenticated %}<a class="button" href="{% url 'dashboard' %}">Open your expiry list</a>{% else %}<a class="button" href="{% url 'register' %}">Create your account</a>{% endif %}
+    </section>
+</div>
+{% endblock %}

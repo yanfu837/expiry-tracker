@@ -7,11 +7,12 @@
     <meta name="description" content="Track business licenses, insurance, contracts and important expiry dates.">
     <title>{% block title %}Expiry Tracker{% endblock %} | Expiry Tracker</title>
     <link rel="stylesheet" href="{% static 'expiry/styles.css' %}">
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
-        <a class="brand" href="{% url 'dashboard' %}">Expiry Tracker</a>
+        <a class="brand" href="{% if user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'contractors' %}{% endif %}">Expiry Tracker</a>
         <nav aria-label="Account">
             {% if user.is_authenticated %}
                 <span class="username">{{ user.username }}</span>

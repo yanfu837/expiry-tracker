@@ -118,5 +118,5 @@ class ReminderDeliveryTests(TestCase):
         self.assertFalse(ReminderDelivery.objects.exists())
         response = self.client.post(reverse("password_reset"), {"email":"owner@example.com"})
         self.assertEqual(response.status_code, 503)
-        self.assertContains(response, "not available yet", status_code=503)
+        self.assertContains(response, "temporarily unavailable", status_code=503)
         self.assertEqual(len(mail.outbox), 0)

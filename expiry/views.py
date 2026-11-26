@@ -192,6 +192,14 @@ def test_email(request):
 
 
 class ConfiguredPasswordResetView(auth_views.PasswordResetView):
+    def form_valid(self, form):
+        self.extra_email_context = {
+            **(self.extra_email_context or {}),
+            "support_email": settings.SUPPORT_EMAIL,
+            "password_reset_minutes": settings.PASSWORD_RESET_TIMEOUT // 60,
+        }
+        return super().form_valid(form)
+
     def dispatch(self, request, *args, **kwargs):
         if not email_is_configured():
             response = render(request, "expiry/email_unavailable.html", status=503)
